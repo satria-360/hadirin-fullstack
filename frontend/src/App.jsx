@@ -9,15 +9,16 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('landing');
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-[#0051d1] via-[#012d7c] to-[#051429] text-white font-sans flex flex-col justify-between">
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+    <div className="min-h-screen bg-gradient-to-br from-[#003ea8] via-[#002766] to-[#040c1a] text-white font-sans flex flex-col selection:bg-blue-500 selection:text-white">
+      {/* Navbar ditampilkan kecuali pada halaman login */}
+      {activeTab !== 'login' && <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />}
 
-      <div className="pt-24 min-h-screen flex flex-col justify-between">
+      <main className={`flex-1 flex flex-col ${activeTab === 'login' ? 'justify-center items-center' : 'pt-24'}`}>
         {activeTab === 'landing' && <LandingPage onNavigate={setActiveTab} />}
-        {activeTab === 'tentang' && <TentangPage />}
-        {activeTab === 'fitur' && <FiturPage />}
-        {activeTab === 'login' && <LoginPage />}
-      </div>
+        {activeTab === 'tentang' && <TentangPage onNavigate={setActiveTab} />}
+        {activeTab === 'fitur' && <FiturPage onNavigate={setActiveTab} />}
+        {activeTab === 'login' && <LoginPage onNavigate={setActiveTab} />}
+      </main>
     </div>
   );
 }

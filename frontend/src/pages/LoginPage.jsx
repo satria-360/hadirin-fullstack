@@ -1,64 +1,79 @@
-import React, { useState } from 'react';
-import { Mail, Lock, User } from 'lucide-react';
+import { useState } from "react";
 
-export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+// Import semua komponen
+import Logo from "../components/Logo";
+import AvatarIcon from "../components/AvatarIcon";
+import InputField from "../components/InputField";
+import LoginButton from "../components/LoginButton";
 
-  const handleSubmit = (e) => {
+function LoginPage() {
+  // State untuk menyimpan nilai form
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  // Fungsi saat form di-submit
+  const handleLogin = (e) => {
     e.preventDefault();
-    console.log('Login:', { email, password });
+    console.log("Email:", email);
+    console.log("Password:", password);
   };
 
   return (
-    <main className="flex-grow flex items-center justify-center py-8 relative z-10 px-6">
-      <div className="bg-white/10 backdrop-blur-xl border border-white/20 text-white w-full max-w-[420px] rounded-3xl p-8 shadow-2xl flex flex-col items-center">
-        <div className="w-16 h-16 rounded-2xl bg-[#1e2d42] border border-white/50 flex items-center justify-center mb-5">
-          <User className="w-8 h-8 text-white" />
-        </div>
+    <div className="flex items-center justify-center py-6 px-4 w-full">
+      {/* Kartu utama */}
+      <div className="w-full max-w-[420px] bg-slate-900/70 backdrop-blur-2xl border border-white/15 rounded-3xl shadow-2xl p-8 flex flex-col items-center">
 
-        <h1 className="text-2xl font-bold mb-1">Selamat Datang!</h1>
-        <p className="text-xs text-slate-200/80 mb-8 text-center">Silahkan Masuk Untuk Mengakses Semua Fitur!</p>
+        {/* Ikon avatar */}
+        <AvatarIcon />
 
-        <form onSubmit={handleSubmit} className="w-full space-y-4">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-200 block">Alamat Email</label>
-            <div className="relative flex items-center">
-              <Mail className="absolute left-3.5 w-5 h-5 text-slate-300 pointer-events-none" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@gmail.com"
-                className="w-full bg-white/10 border border-white/20 rounded-xl py-2.5 pl-11 pr-4 text-sm text-white focus:outline-none"
-                required
-              />
-            </div>
-          </div>
+        {/* Judul */}
+        <h1 className="text-white text-2xl font-bold tracking-tight text-center">
+          Selamat Datang
+        </h1>
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-200 block">Password</label>
-            <div className="relative flex items-center">
-              <Lock className="absolute left-3.5 w-5 h-5 text-slate-300 pointer-events-none" />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="password"
-                className="w-full bg-white/10 border border-white/20 rounded-xl py-2.5 pl-11 pr-4 text-sm text-white focus:outline-none"
-                required
-              />
-            </div>
-          </div>
+        {/* Subtitle */}
+        <p className="text-slate-300/80 text-xs mt-1.5 text-center leading-relaxed">
+          Silahkan masukkan email dan password anda
+        </p>
 
-          <button
-            type="submit"
-            className="w-full bg-white text-gray-900 font-semibold py-3 rounded-full mt-4 hover:bg-gray-100 transition"
-          >
-            Mulai Sekarang
-          </button>
+        {/* Form login */}
+        <form onSubmit={handleLogin} className="w-full space-y-4 mt-6">
+
+          {/* Input Email */}
+          <InputField
+            type="email"
+            placeholder="Masukkan email anda"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            icon={
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M3 7l9 6 9-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            }
+          />
+
+          {/* Input Password */}
+          <InputField
+            type="password"
+            placeholder="Masukkan password anda"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            icon={
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M8 11V8a4 4 0 018 0v3" stroke="currentColor" strokeWidth="1.5" />
+                <circle cx="12" cy="15.5" r="1.5" fill="currentColor" />
+              </svg>
+            }
+          />
+
+          {/* Tombol Masuk */}
+          <LoginButton />
         </form>
       </div>
-    </main>
+    </div>
   );
 }
+
+export default LoginPage;
