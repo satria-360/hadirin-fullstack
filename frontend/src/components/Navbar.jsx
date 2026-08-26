@@ -13,11 +13,11 @@ export default function Navbar({ activeTab, setActiveTab }) {
       </button>
 
       {/* Floating Capsule Menu */}
-      <nav className="flex items-center bg-[#15233a]/50 backdrop-blur-xl rounded-2xl p-1.5 border border-white/10 shadow-2xl gap-8 md:gap-2">
+      <nav className="flex items-center bg-[#15233a]/45 backdrop-blur-[40px] rounded-2xl p-3 border border-white/15 shadow-2xl gap-2 md:gap-4 ">
         <button
           onClick={() => setActiveTab && setActiveTab('tentang')}
-          className={`text-xs md:text-sm font-medium px-4 ml-4 py-5 rounded-xl transition ${activeTab === 'tentang'
-            ? 'bg-white/20 text-white font-semibold'
+          className={`text-xs md:text-sm font-medium px-4 py-2 rounded-[12px] transition ${activeTab === 'tentang'
+            ? 'bg-white text-slate-950 font-bold shadow-md'
             : 'text-gray-300 hover:text-white'
             }`}
         >
@@ -26,8 +26,8 @@ export default function Navbar({ activeTab, setActiveTab }) {
 
         <button
           onClick={() => setActiveTab && setActiveTab('fitur')}
-          className={`text-xs md:text-sm font-medium px-4 py-4 rounded-xl transition ${activeTab === 'fitur'
-            ? 'bg-white/20 text-white font-semibold'
+          className={`text-xs md:text-sm font-medium px-4 py-2 rounded-[12px] transition ${activeTab === 'fitur'
+            ? 'bg-white text-slate-950 font-bold shadow-md'
             : 'text-gray-300 hover:text-white'
             }`}
         >
@@ -36,10 +36,10 @@ export default function Navbar({ activeTab, setActiveTab }) {
 
         <button
           onClick={() => setActiveTab && setActiveTab('login')}
-          className="bg-white text-slate-950 text-xs md:text-sm font-bold px-4 py-3 rounded-xl flex items-center gap-2 hover:bg-slate-100 active:scale-[0.98] transition shadow-md mr-4"
+          className="bg-transparent border border-white/20 text-white text-xs md:text-sm font-semibold px-3.5 py-2 rounded-xl flex items-center gap-2 hover:bg-white/10 active:scale-[0.98] transition shadow-md"
         >
           Mulai Sekarang
-          <span className="w-5 h-5 bg-black text-white rounded-full flex items-center justify-center">
+          <span className="w-5 h-5 bg-white text-slate-950 rounded-full flex items-center justify-center">
             <ArrowRight className="w-3 h-3 stroke-[3]" />
           </span>
         </button>
