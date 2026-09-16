@@ -9,11 +9,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('landing');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#003ea8] via-[#002766] to-[#040c1a] text-white font-sans flex flex-col selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen bg-[#082052] text-white font-sans flex flex-col selection:bg-blue-500 selection:text-white">                          
       {/* Navbar ditampilkan kecuali pada halaman login */}
       {activeTab !== 'login' && <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />}
 
-      <main className={`flex-1 flex flex-col ${activeTab === 'login' ? 'justify-center items-center' : 'pt-24'}`}>
+      <main className={`flex-1 flex flex-col ${activeTab === 'login' ? 'justify-center items-center' : 'pt-32'}`}>
         {activeTab === 'landing' && <LandingPage onNavigate={setActiveTab} />}
         {activeTab === 'tentang' && <TentangPage onNavigate={setActiveTab} />}
         {activeTab === 'fitur' && <FiturPage onNavigate={setActiveTab} />}
