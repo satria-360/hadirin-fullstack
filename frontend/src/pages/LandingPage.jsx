@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, ArrowUpRight } from 'lucide-react';
+import { ExternalLink, ArrowUpRight, SquareArrowOutUpRight } from 'lucide-react';
 import HeroArtwork from '../components/HeroArtwork';
 import LaptopIllustration from '../components/LaptopIllustration';
 
@@ -23,10 +23,10 @@ export default function LandingPage({ onNavigate }) {
             <div className="pt-2">
               <button
                 onClick={() => onNavigate && onNavigate('fitur')}
-                className="inline-flex items-center gap-2.5 bg-white text-[#0047b3] font-bold text-sm sm:text-base px-6 sm:px-7 py-3.5 rounded-2xl shadow-xl hover:bg-slate-50 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                className="inline-flex items-center gap-2.5 bg-white text-[#0047b3] font-bold text-sm sm:text-base px-6 sm:px-7 py-3.5 rounded-[16px] shadow-xl hover:bg-slate-50 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
               >
                 Pelajari Lebih Lanjut
-                <ExternalLink className="w-4 h-4 stroke-[2.5]" />
+                <SquareArrowOutUpRight className="w-4 h-4 stroke-[2.5]" />
               </button>
             </div>
           </div>
@@ -63,7 +63,7 @@ export default function LandingPage({ onNavigate }) {
       {/* 3. HUBUNGI KAMI / CONTACT CARD SECTION */}
       <section className="py-12 md:py-16">
         <div className="w-full max-w-7xl mx-auto px-6 md:px-12">
-          <div className="w-full bg-white/[0.08] backdrop-blur-2xl border border-white/15 rounded-3xl p-8 sm:p-12 md:p-14 shadow-2xl space-y-8">
+          <div className="w-full bg-white/[0.08] backdrop-blur-2xl border border-white/15 rounded-3xl p-8 sm:p-12 md:p-14 shadow-[0_20px_50px_rgba(0,0,0,0.55)] drop-shadow-[0_20px_25px_rgba(0,0,0,0.4)] space-y-8">
 
             {/* Title with Arrow Icon */}
             <div className="flex items-center gap-3">

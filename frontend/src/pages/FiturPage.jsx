@@ -14,17 +14,16 @@ export default function FiturPage() {
       .catch((err) => console.error('API Error:', err));
   }, []);
 
-  // Masukkan gambar yang sudah di-import ke array
   const assetsImages = [HeroImg, LaptopImg];
 
   return (
-    // Kode BARU (menyatu sempurna dengan Navbar)
-<div className="w-full min-h-screen bg-[#082052] text-white font-sans overflow-x-hidden m-0 p-0">
+    /* Menambahkan pt-28 agar kubah merah terdorong ke bawah Navbar */
+    <div className="w-full min-h-screen bg-[#082052] text-white font-sans overflow-x-hidden m-0 p-0 pt-28">
       <main className="w-full flex flex-col items-center">
         
         {/* LENGKUNGAN MERAH 1 (ATAS) */}
         <section 
-          className="w-full bg-[#ee0000] pt-16 pb-44 px-6 text-center shadow-lg relative z-0"
+          className="w-full bg-[#ee0000] pt-12 pb-44 px-6 text-center shadow-lg relative z-0"
           style={{ borderRadius: '160px 160px 0 0' }}
         >
           <div className="max-w-xl mx-auto space-y-3">
