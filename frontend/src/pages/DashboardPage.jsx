@@ -1,25 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function DashboardPage({ onNavigate }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('Bahasa Indonesia (07:00 - 9:00)');
   const [activeMenu, setActiveMenu] = useState('attendance'); // 'attendance' | 'stats' | 'settings'
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Data Siswa Dummy
-  const [students, setStudents] = useState([
-    { id: '242510056', noAbsen: '01', name: 'Aditya Pratama', status: '' },
-    { id: '242510045', noAbsen: '02', name: 'Asoey Suyatno', status: '' },
-    { id: '242510046', noAbsen: '03', name: 'Ahmad Dahlan', status: '' },
-    { id: '242510047', noAbsen: '04', name: 'Anisa Rahmawati', status: '' },
-    { id: '242510048', noAbsen: '05', name: 'Budi Santoso', status: '' },
-    { id: '242510044', noAbsen: '06', name: 'Aziz Ibnu', status: '' },
-  ]);
+  // Ambil Data Siswa & Absensi dari Backend saat Pertama Load
+  useEffect(() => {
+    fetchStudents();
+  }, []);
 
-  // Mengubah status per siswa
-  const handleStatusChange = (id, newStatus) => {
+  const fetchStudents = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/picket/dashboard', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setStudents(data);
+      }
+    } catch (error) {
+      console.error('Gagal mengambil data siswa:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Mengubah status per siswa & Simpan ke Database
+  const handleStatusChange = async (id, newStatus) => {
+    // Update tampilan lokal secara instan
     setStudents(prev =>
       prev.map(student => (student.id === id ? { ...student, status: newStatus } : student))
     );
+
+    // Kirim perubahan status ke backend
+    try {
+      const token = localStorage.getItem('token');
+      await fetch('http://localhost:5000/api/picket/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          student_id: id,
+          status: newStatus,
+          subject: selectedSubject,
+        }),
+      });
+    } catch (error) {
+      console.error('Gagal memperbarui status di server:', error);
+    }
   };
 
   // Setel semua siswa menjadi Hadir
@@ -32,26 +66,45 @@ export default function DashboardPage({ onNavigate }) {
     setStudents(prev => prev.map(student => ({ ...student, status: '' })));
   };
 
+  // Fitur Unduh / Ekspor ke File Excel
+  const handleExportExcel = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch('http://localhost:5000/api/reports/export/excel', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) throw new Error('Gagal mengunduh');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Laporan_Absensi_Piket.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (error) {
+      alert('Gagal mengunduh file Excel');
+    }
+  };
+
   // Filter siswa berdasarkan pencarian Nama atau NIS
   const filteredStudents = students.filter(
     s =>
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.id.includes(searchQuery)
+      (s.name && s.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (s.id && s.id.toString().includes(searchQuery))
   );
 
   return (
     <div className="min-h-screen bg-[#082052] text-white flex font-sans selection:bg-blue-500 selection:text-white">
-      {/* -------------------------------------------------- */}
       {/* SIDEBAR KIRI */}
-      {/* -------------------------------------------------- */}
       <aside className="w-20 bg-[#F5EFEB] flex flex-col items-center justify-between py-6 rounded-r-3xl shadow-xl z-10 shrink-0">
-        {/* LOGO ATAS */}
         <div className="flex flex-col items-center gap-8 w-full">
           <div className="w-12 h-12 rounded-full bg-[#082052]/10 flex items-center justify-center border border-[#082052]/20">
             <span className="text-xl font-bold text-[#082052]">🎓</span>
           </div>
 
-          {/* NAVIGASI MENU */}
           <div className="flex flex-col gap-4 w-full px-2">
             <button
               onClick={() => setActiveMenu('attendance')}
@@ -98,7 +151,6 @@ export default function DashboardPage({ onNavigate }) {
           </div>
         </div>
 
-        {/* LOGOUT */}
         <button
           onClick={() => onNavigate && onNavigate('login')}
           className="w-12 h-12 rounded-2xl text-[#082052]/60 hover:text-red-600 hover:bg-red-100 flex items-center justify-center transition"
@@ -110,11 +162,8 @@ export default function DashboardPage({ onNavigate }) {
         </button>
       </aside>
 
-      {/* -------------------------------------------------- */}
       {/* KONTEN UTAMA */}
-      {/* -------------------------------------------------- */}
       <main className="flex-1 p-8 md:p-12 overflow-y-auto max-w-7xl mx-auto">
-        {/* HEADER DASHBOARD */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
           <div>
             <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
@@ -125,7 +174,6 @@ export default function DashboardPage({ onNavigate }) {
             </p>
           </div>
 
-          {/* DROPDOWN JADWAL */}
           <div className="text-right">
             <label className="text-xs text-gray-300 block mb-1">Jadwalmu Saat Ini :</label>
             <select
@@ -140,7 +188,6 @@ export default function DashboardPage({ onNavigate }) {
           </div>
         </div>
 
-        {/* SECTION AKSI & BARIS PENCARIAN */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
           <div>
             <h2 className="text-xl md:text-2xl font-bold tracking-tight">Daftar Siswa</h2>
@@ -148,7 +195,6 @@ export default function DashboardPage({ onNavigate }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* INPUT CARI */}
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">🔍</span>
               <input
@@ -160,7 +206,6 @@ export default function DashboardPage({ onNavigate }) {
               />
             </div>
 
-            {/* TOMBOL SET HADIR SEMUA */}
             <button
               onClick={handleSetHadirSemua}
               className="px-5 py-2 bg-white text-[#082052] hover:bg-gray-100 font-bold text-xs rounded-full shadow-md transition"
@@ -168,54 +213,56 @@ export default function DashboardPage({ onNavigate }) {
               Set Hadir Semua
             </button>
 
-            {/* TOMBOL RESET */}
             <button
               onClick={handleReset}
               className="px-5 py-2 border border-white/30 text-white hover:bg-white/10 font-medium text-xs rounded-full transition"
             >
               Reset
             </button>
+
+            {/* Tombol Ekspor Excel */}
+            <button
+              onClick={handleExportExcel}
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-full shadow-md transition"
+            >
+              📊 Ekspor Excel
+            </button>
           </div>
         </div>
 
-        {/* -------------------------------------------------- */}
         {/* TABEL DAFTAR SISWA */}
-        {/* -------------------------------------------------- */}
         <div className="bg-[#F5EFEB] text-[#082052] rounded-2xl overflow-hidden shadow-2xl">
-          {/* HEADER TABEL */}
           <div className="grid grid-cols-12 px-6 py-4 font-bold text-xs border-b border-[#082052]/10 uppercase tracking-wider">
             <div className="col-span-2 md:col-span-1">No Absen</div>
             <div className="col-span-6 md:col-span-7">Nama Siswa</div>
             <div className="col-span-4 md:col-span-4 text-right pr-4">Keterangan</div>
           </div>
 
-          {/* BARIS SISWA */}
           <div className="divide-y divide-[#082052]/10">
-            {filteredStudents.length > 0 ? (
-              filteredStudents.map((student) => (
+            {loading ? (
+              <div className="p-8 text-center text-xs text-gray-500">Memuat data siswa...</div>
+            ) : filteredStudents.length > 0 ? (
+              filteredStudents.map((student, index) => (
                 <div
-                  key={student.id}
+                  key={student.id || index}
                   className="grid grid-cols-12 items-center px-6 py-4 text-sm hover:bg-black/5 transition"
                 >
-                  {/* NO ABSEN */}
                   <div className="col-span-2 md:col-span-1 text-xl md:text-2xl font-bold text-[#082052]/80">
-                    {student.noAbsen}
+                    {student.noAbsen || String(index + 1).padStart(2, '0')}
                   </div>
 
-                  {/* NAMA & NIS */}
                   <div className="col-span-6 md:col-span-7">
                     <h3 className="font-bold text-[#082052] text-sm md:text-base leading-tight">
-                      {student.name}
+                      {student.full_name || student.name}
                     </h3>
                     <p className="text-[11px] text-gray-500 font-medium mt-0.5">
                       NIS: {student.id}
                     </p>
                   </div>
 
-                  {/* DROPDOWN PILIH AKSI / STATUS */}
                   <div className="col-span-4 md:col-span-4 flex justify-end">
                     <select
-                      value={student.status}
+                      value={student.status || ''}
                       onChange={(e) => handleStatusChange(student.id, e.target.value)}
                       className={`w-36 md:w-48 px-4 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer shadow-md focus:outline-none ${
                         student.status === 'Hadir'
@@ -232,26 +279,16 @@ export default function DashboardPage({ onNavigate }) {
                       <option value="" disabled className="bg-[#082052] text-white">
                         Pilih Aksi
                       </option>
-                      <option value="Hadir" className="bg-[#082052] text-white">
-                        Hadir
-                      </option>
-                      <option value="Izin" className="bg-[#082052] text-white">
-                        Izin
-                      </option>
-                      <option value="Sakit" className="bg-[#082052] text-white">
-                        Sakit
-                      </option>
-                      <option value="Alpa" className="bg-[#082052] text-white">
-                        Alpa
-                      </option>
+                      <option value="Hadir" className="bg-[#082052] text-white">Hadir</option>
+                      <option value="Izin" className="bg-[#082052] text-white">Izin</option>
+                      <option value="Sakit" className="bg-[#082052] text-white">Sakit</option>
+                      <option value="Alpa" className="bg-[#082052] text-white">Alpa</option>
                     </select>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="p-8 text-center text-xs text-gray-500">
-                Siswa tidak ditemukan.
-              </div>
+              <div className="p-8 text-center text-xs text-gray-500">Siswa tidak ditemukan.</div>
             )}
           </div>
         </div>
