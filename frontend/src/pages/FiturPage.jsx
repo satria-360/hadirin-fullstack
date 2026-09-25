@@ -20,10 +20,10 @@ export default function FiturPage() {
     /* Menambahkan pt-28 agar kubah merah terdorong ke bawah Navbar */
     <div className="w-full min-h-screen bg-[#082052] text-white font-sans overflow-x-hidden m-0 p-0 pt-28">
       <main className="w-full flex flex-col items-center">
-        
+
         {/* LENGKUNGAN MERAH 1 (ATAS) */}
-        <section 
-          className="w-full bg-[#ee0000] pt-12 pb-44 px-6 text-center shadow-lg relative z-0"
+        <section
+          className="w-full bg-[#ee0000] pt-22 pb-54 px-6 text-center shadow-lg relative z-0"
           style={{ borderRadius: '160px 160px 0 0' }}
         >
           <div className="max-w-xl mx-auto space-y-3">
@@ -37,9 +37,9 @@ export default function FiturPage() {
         </section>
 
         {/* LENGKUNGAN MERAH 2 (BAWAH) */}
-        <section 
+        <section
           className="w-full bg-gradient-to-b from-[#ee0000] via-[#b80000] to-[#500407] -mt-32 pt-20 pb-16 px-6 md:px-16 shadow-[0_-20px_40px_rgba(0,0,0,0.4)] relative z-10 flex flex-col items-center"
-          style={{ borderRadius: '160px 160px 0 0' }}
+          style={{ borderRadius: '140px 140px 0 0' }}
         >
           <div className="w-full max-w-4xl space-y-20 pt-6">
             {features.length > 0 ? (
@@ -48,9 +48,8 @@ export default function FiturPage() {
                 return (
                   <div
                     key={item.id || index}
-                    className={`flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12 ${
-                      !isEven ? 'md:flex-row-reverse' : ''
-                    }`}
+                    className={`flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12 ${!isEven ? 'md:flex-row-reverse' : ''
+                      }`}
                   >
                     <div className="w-full md:w-1/2 flex justify-center">
                       <div className="w-full max-w-[340px] h-44 md:h-52 rounded-2xl overflow-hidden shadow-2xl border border-white/20 bg-black/20">
@@ -125,7 +124,7 @@ export default function FiturPage() {
                 <h3 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
                   Hubungi Kami <span className="text-lg">↗</span>
                 </h3>
-                
+
                 <div className="space-y-3 text-xs text-red-100/80">
                   <div>
                     <p className="font-semibold text-white">Email</p>

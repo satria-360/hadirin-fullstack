@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
 
-export default function Navbar({ activeTab, setActiveTab }) {
+export default function Navbar({ activeTab, setActiveTab, currentUser, onLogout }) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 px-6 md:px-12 py-5 max-w-7xl mx-auto flex items-center justify-between">
       {/* Brand Logo */}
@@ -34,16 +34,28 @@ export default function Navbar({ activeTab, setActiveTab }) {
           Fitur Utama
         </button>
 
-        <button
-          onClick={() => setActiveTab && setActiveTab('login')}
-          className="bg-transparent border border-white/20 text-white text-xs md:text-sm font-semibold px-3.5 py-2 rounded-xl flex items-center gap-2 hover:bg-white/10 active:scale-[0.98] transition shadow-md"
-        >
-          Mulai Sekarang
-          <span className="w-5 h-5 bg-white text-slate-950 rounded-full flex items-center justify-center">
-            <ArrowRight className="w-3 h-3 stroke-[3]" />
-          </span>
-        </button>
+        {currentUser ? (
+          <button
+            onClick={() => setActiveTab && setActiveTab('dashboard')}
+            className="bg-white text-slate-950 text-xs md:text-sm font-bold px-3.5 py-2 rounded-xl flex items-center gap-2 hover:bg-gray-100 active:scale-[0.98] transition shadow-md"
+          >
+            Dashboard ({currentUser.full_name?.split(' ')[0] || 'User'})
+            <span className="w-5 h-5 bg-[#082052] text-white rounded-full flex items-center justify-center">
+              <ArrowRight className="w-3 h-3 stroke-[3]" />
+            </span>
+          </button>
+        ) : (
+          <button
+            onClick={() => setActiveTab && setActiveTab('login')}
+            className="bg-transparent border border-white/20 text-white text-xs md:text-sm font-semibold px-3.5 py-2 rounded-xl flex items-center gap-2 hover:bg-white/10 active:scale-[0.98] transition shadow-md"
+          >
+            Mulai Sekarang
+            <span className="w-5 h-5 bg-white text-slate-950 rounded-full flex items-center justify-center">
+              <ArrowRight className="w-3 h-3 stroke-[3]" />
+            </span>
+          </button>
+        )}
       </nav>
     </header>
   );
-}
+}
