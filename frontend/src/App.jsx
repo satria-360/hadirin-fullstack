@@ -84,6 +84,7 @@ export default function App() {
             onNavigate={setActiveTab} 
             currentUser={currentUser}
             onLogout={handleLogout}
+            onUpdateUser={setCurrentUser}
           />
         )}
       </main>
