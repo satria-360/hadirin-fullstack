@@ -322,6 +322,214 @@ app.get('/api/reports/export/excel', async (req, res) => {
   }
 });
 
+// 4b. GET API: Ekspor Rekap Absensi Siswa ke Excel
+app.get('/api/attendance/export/excel', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        CURDATE() AS tanggal,
+        u.employee_code, 
+        u.full_name, 
+        COALESCE(pr.status, 'Belum Absen') AS status,
+        COALESCE(pr.area_name, 'Kelas') AS mata_pelajaran
+      FROM users u
+      LEFT JOIN picket_reports pr 
+        ON u.id = pr.user_id AND pr.picket_date = CURDATE()
+      ORDER BY u.id ASC
+    `);
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Rekap Absensi Siswa');
+
+    worksheet.columns = [
+      { header: 'Tanggal', key: 'tanggal', width: 15 },
+      { header: 'No Absen / NIS', key: 'employee_code', width: 18 },
+      { header: 'Nama Siswa', key: 'full_name', width: 30 },
+      { header: 'Mata Pelajaran', key: 'mata_pelajaran', width: 25 },
+      { header: 'Status Kehadiran', key: 'status', width: 18 }
+    ];
+
+    // Style header row
+    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF082052' }
+    };
+
+    worksheet.addRows(rows);
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=Rekap_Absensi_Siswa.xlsx');
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 4c. POST API: Simpan Batch Rekap Absensi Hari Ini
+app.post('/api/attendance/save-all', async (req, res) => {
+  const { students, subject } = req.body;
+  if (!Array.isArray(students)) {
+    return res.status(400).json({ success: false, message: 'Data siswa tidak valid' });
+  }
+
+  try {
+    for (const student of students) {
+      if (student.status) {
+        const [existing] = await db.query(
+          'SELECT id FROM picket_reports WHERE user_id = ? AND picket_date = CURDATE()',
+          [student.id]
+        );
+
+        if (existing.length > 0) {
+          await db.query(
+            'UPDATE picket_reports SET status = ?, area_name = ? WHERE id = ?',
+            [student.status, subject || 'Presensi Kelas', existing[0].id]
+          );
+        } else {
+          await db.query(
+            'INSERT INTO picket_reports (user_id, picket_date, area_name, status, notes) VALUES (?, CURDATE(), ?, ?, ?)',
+            [student.id, subject || 'Presensi Kelas', student.status, 'Presensi Wali Kelas']
+          );
+        }
+      }
+    }
+
+    res.json({ success: true, message: 'Seluruh rekap absensi hari ini berhasil disimpan!' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Gagal menyimpan rekap: ' + error.message });
+  }
+});
+
+// 4d. POST API: Batch Import Siswa / Status dari Excel
+app.post('/api/attendance/import-batch', async (req, res) => {
+  const { records } = req.body; // Array of { noAbsen, name, status }
+  if (!Array.isArray(records)) {
+    return res.status(400).json({ success: false, message: 'Data import tidak valid' });
+  }
+
+  try {
+    let importedCount = 0;
+    for (const item of records) {
+      if (item.name || item.noAbsen) {
+        // Cari user yang cocok
+        const [users] = await db.query(
+          'SELECT id FROM users WHERE employee_code = ? OR full_name LIKE ? LIMIT 1',
+          [item.noAbsen || '', `%${item.name || ''}%`]
+        );
+
+        if (users.length > 0) {
+          const userId = users[0].id;
+          const status = item.status || 'Hadir';
+
+          const [existing] = await db.query(
+            'SELECT id FROM picket_reports WHERE user_id = ? AND picket_date = CURDATE()',
+            [userId]
+          );
+
+          if (existing.length > 0) {
+            await db.query(
+              'UPDATE picket_reports SET status = ? WHERE id = ?',
+              [status, existing[0].id]
+            );
+          } else {
+            await db.query(
+              'INSERT INTO picket_reports (user_id, picket_date, area_name, status, notes) VALUES (?, CURDATE(), ?, ?, ?)',
+              [userId, 'Presensi Kelas', status, 'Import Excel']
+            );
+          }
+          importedCount++;
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Berhasil mengimpor ${importedCount} data absensi siswa!`
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Gagal mengimpor: ' + error.message });
+  }
+});
+
+// 5. PUT API: Perbarui Profil Pengguna
+app.put('/api/users/profile', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Token tidak ditemukan!' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const { full_name, email, phone_number, avatar_url } = req.body;
+
+    await db.query(
+      `UPDATE users 
+       SET full_name = COALESCE(?, full_name),
+           email = COALESCE(?, email),
+           phone_number = COALESCE(?, phone_number),
+           avatar_url = COALESCE(?, avatar_url)
+       WHERE id = ?`,
+      [full_name, email, phone_number, avatar_url, decoded.id]
+    );
+
+    const [rows] = await db.query(
+      `SELECT u.id, u.employee_code, u.full_name, u.email, u.phone_number, u.avatar_url, u.status, r.name AS role_name
+       FROM users u
+       JOIN roles r ON u.role_id = r.id
+       WHERE u.id = ? LIMIT 1`,
+      [decoded.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Profil berhasil diperbarui!',
+      user: rows[0]
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Gagal memperbarui profil: ' + error.message });
+  }
+});
+
+// 6. PUT API: Ubah Password Pengguna
+app.put('/api/users/change-password', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Token tidak ditemukan!' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Password lama dan baru wajib diisi!' });
+    }
+
+    const [rows] = await db.query('SELECT password_hash FROM users WHERE id = ? LIMIT 1', [decoded.id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User tidak ditemukan.' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, rows[0].password_hash);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Password saat ini salah!' });
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, decoded.id]);
+
+    res.json({ success: true, message: 'Password berhasil diperbarui!' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Gagal memperbarui password: ' + error.message });
+  }
+});
+
 app.listen(5000, () => {
   console.log('Server berjalan di port 5000');
 });
