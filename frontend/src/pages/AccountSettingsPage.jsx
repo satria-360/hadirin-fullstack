@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
-export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateUser }) {
+export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateUser, onStudentAdded, onOpenAddStudent }) {
+  const [studentAddedSuccess, setStudentAddedSuccess] = useState('');
   // Parsing first and last name
   const getInitialNames = () => {
     const fullName = currentUser?.full_name || 'Sir Lewis Carl Davidson Hamilton';
@@ -185,6 +186,13 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
         </p>
       </div>
 
+      {studentAddedSuccess && (
+        <div className="max-w-4xl mx-auto mb-4 p-3 rounded-2xl bg-emerald-500/20 border border-emerald-400 text-emerald-200 text-xs font-semibold flex items-center justify-between">
+          <span>{studentAddedSuccess}</span>
+          <button onClick={() => setStudentAddedSuccess('')}>✕</button>
+        </div>
+      )}
+
       {/* Kartu Utama Berwarna Krem Lembut Persis Screenshot */}
       <div className="bg-[#F8F3ED] text-[#1E293B] rounded-3xl p-6 md:p-10 shadow-2xl relative max-w-4xl mx-auto border border-[#E9DFD5]">
         
@@ -355,18 +363,20 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             <button
+              type="button"
               onClick={() => {
-                if (onNavigate) onNavigate('dashboard');
+                if (onOpenAddStudent) onOpenAddStudent('absensi');
               }}
-              className="w-full py-2.5 px-4 bg-[#1C1F23] hover:bg-black text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer text-center"
+              className="w-full py-3 px-4 bg-[#1C1F23] hover:bg-black text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer text-center"
             >
               Tambah Data Absensi Siswa
             </button>
             <button
+              type="button"
               onClick={() => {
-                if (onNavigate) onNavigate('dashboard');
+                if (onOpenAddStudent) onOpenAddStudent('piket');
               }}
-              className="w-full py-2.5 px-4 bg-[#1C1F23] hover:bg-black text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer text-center"
+              className="w-full py-3 px-4 bg-[#1C1F23] hover:bg-black text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer text-center"
             >
               Tambah Data Siswa Piket
             </button>

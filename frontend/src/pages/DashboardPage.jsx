@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import PicketSchedulePage from './PicketSchedulePage';
 import AccountSettingsPage from './AccountSettingsPage';
+import TambahSiswaPage from './TambahSiswaPage';
 
 export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpdateUser }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('Bahasa Indonesia (07:00 - 9:00)');
-  const [activeMenu, setActiveMenu] = useState('attendance'); // 'attendance' | 'picket' | 'settings'
+  const [activeMenu, setActiveMenu] = useState('attendance'); // 'attendance' | 'picket' | 'settings' | 'addStudent'
+  const [addStudentType, setAddStudentType] = useState('absensi'); // 'absensi' | 'piket'
   const [classCode, setClassCode] = useState('GAJBHG');
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -234,18 +236,43 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
     XLSX.writeFile(wb, 'Template_Import_Absensi.xlsx');
   };
 
-  // Filter siswa berdasarkan pencarian Nama atau NIS
-  const filteredStudents = students.filter(
-    s =>
-      (s.full_name && s.full_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (s.name && s.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (s.id && s.id.toString().includes(searchQuery))
-  );
+  // Filter siswa berdasarkan pencarian Nama atau NIS, serta kecualikan akun yang sedang login jika login sebagai siswa
+  const filteredStudents = students
+    .filter(s => !currentUser?.id || String(s.id) !== String(currentUser.id))
+    .filter(
+      s =>
+        (s.full_name && s.full_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (s.name && s.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (s.id && s.id.toString().includes(searchQuery))
+    );
+
+  // Jika sedang membuka halaman Tambah Siswa, render sebagai Full Page persis tampilan mockup tanpa sidebar dashboard
+  if (activeMenu === 'addStudent') {
+    return (
+      <TambahSiswaPage
+        defaultType={addStudentType}
+        onBack={() => setActiveMenu('settings')}
+        onSuccess={(newStudent) => {
+          setStudents(prev => [newStudent, ...prev]);
+          if (addStudentType === 'piket') {
+            setActiveMenu('picket');
+          } else {
+            setActiveMenu('attendance');
+          }
+          setImportStatus({
+            text: `Siswa "${newStudent.full_name}" berhasil ditambahkan dan masuk ke sistem!`,
+            type: 'success'
+          });
+          setTimeout(() => setImportStatus({ text: '', type: '' }), 4000);
+        }}
+      />
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#082052] text-white flex font-sans selection:bg-blue-500 selection:text-white">
-      {/* SIDEBAR KIRI (Persis screenshot: Krem lembut, rounded-r-3xl, tombol aktif kapsul) */}
-      <aside className="w-20 md:w-22 bg-[#F5EFEB] flex flex-col items-center justify-between py-6 rounded-r-3xl shadow-2xl z-20 shrink-0 min-h-screen">
+    <div className="min-h-screen bg-[#082052] text-white flex font-sans selection:bg-blue-500 selection:text-white relative">
+      {/* SIDEBAR KIRI (Tetap diam di tempat, fixed / sticky tidak bergerak saat scroll) */}
+      <aside className="w-20 md:w-22 bg-[#F5EFEB] flex flex-col items-center justify-between py-6 rounded-r-3xl shadow-2xl z-30 shrink-0 h-screen sticky top-0 left-0">
         {/* LOGO PENDIDIKAN DI ATAS */}
         <div className="flex flex-col items-center w-full">
           <div 
@@ -367,15 +394,17 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
                   </div>
                 </div>
 
-                {/* Kode Kelasmu */}
-                <div className="flex flex-col">
-                  <span className="text-[11px] text-gray-300 font-medium mb-1">
-                    Kode Kelasmu :
-                  </span>
-                  <div className="bg-[#D6A143] text-white font-extrabold text-sm md:text-base px-6 py-2.5 rounded-xl shadow-md tracking-wider flex items-center justify-center">
-                    {classCode}
+                {/* Kode Kelasmu (Hanya muncul untuk Guru / Wali Kelas) */}
+                {(currentUser?.role_id === 3 || ['guru', 'wali kelas', 'supervisor'].includes(currentUser?.role_name?.toLowerCase())) && (
+                  <div className="flex flex-col">
+                    <span className="text-[11px] text-gray-300 font-medium mb-1">
+                      Kode Kelasmu :
+                    </span>
+                    <div className="bg-[#D6A143] text-white font-extrabold text-sm md:text-base px-6 py-2.5 rounded-xl shadow-md tracking-wider flex items-center justify-center">
+                      {classCode}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -578,7 +607,13 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
 
         {/* TAMPILAN JADWAL PIKET */}
         {activeMenu === 'picket' && (
-          <PicketSchedulePage currentUser={currentUser} onNavigate={onNavigate} />
+          <PicketSchedulePage 
+            currentUser={currentUser} 
+            onNavigate={onNavigate}
+            onStudentAdded={(newStudent) => {
+              setStudents(prev => [newStudent, ...prev]);
+            }}
+          />
         )}
 
         {/* TAMPILAN PENGATURAN AKUN */}
@@ -587,6 +622,13 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
             currentUser={currentUser} 
             onNavigate={onNavigate} 
             onUpdateUser={onUpdateUser}
+            onOpenAddStudent={(type) => {
+              setAddStudentType(type);
+              setActiveMenu('addStudent');
+            }}
+            onStudentAdded={(newStudent) => {
+              setStudents(prev => [newStudent, ...prev]);
+            }}
           />
         )}
       </main>

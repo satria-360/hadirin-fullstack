@@ -123,6 +123,17 @@ app.post('/api/auth/register', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Data pendaftaran belum lengkap!' });
   }
 
+  // Jika mendaftar sebagai Siswa / Murid, wajib memasukkan Kode Kelas valid dari Wali Kelas
+  if (role === 'murid') {
+    const VALID_CLASS_CODE = 'GAJBHG';
+    if (!kodeKelas || kodeKelas.trim().toUpperCase() !== VALID_CLASS_CODE) {
+      return res.status(400).json({
+        success: false,
+        message: 'Kode Kelas tidak valid! Harap minta kode kelas yang sesuai dari Wali Kelas Anda.'
+      });
+    }
+  }
+
   try {
     const cleanEmail = email.trim().toLowerCase();
 
@@ -217,7 +228,7 @@ app.get('/api/auth/me', async (req, res) => {
   }
 });
 
-// 2. GET API: Ambil Daftar Siswa & Status Piket Hari Ini
+// 2. GET API: Ambil Daftar Siswa & Status Piket Hari Ini (Hanya role Siswa/Murid)
 app.get('/api/picket/dashboard', async (req, res) => {
   try {
     const [rows] = await db.query(`
@@ -229,15 +240,67 @@ app.get('/api/picket/dashboard', async (req, res) => {
         pr.notes,
         pp.photo_url
       FROM users u
+      LEFT JOIN roles r ON u.role_id = r.id
       LEFT JOIN picket_reports pr 
         ON u.id = pr.user_id AND pr.picket_date = CURDATE()
       LEFT JOIN picket_photos pp 
         ON pr.id = pp.picket_report_id
+      WHERE LOWER(COALESCE(r.name, '')) IN ('murid', 'siswa', 'employee') OR u.role_id = 4
       ORDER BY u.id ASC
     `);
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// 2b. POST API: Tambah Siswa Baru (Absensi & Jadwal Piket)
+app.post('/api/students/create', async (req, res) => {
+  const { fullName, nis, jenisKelamin, picketDay } = req.body;
+
+  if (!fullName || !nis) {
+    return res.status(400).json({ success: false, message: 'Nama lengkap dan NIS wajib diisi!' });
+  }
+
+  try {
+    const cleanFullName = fullName.trim();
+    const cleanNis = String(nis).trim();
+    const cleanEmail = `siswa_${cleanNis}_${Date.now().toString().slice(-4)}@hadirin.co`;
+    const defaultPasswordHash = await bcrypt.hash('123456', 10);
+
+    // Cek apakah NIS / employee_code sudah ada
+    const [existing] = await db.query(
+      'SELECT id FROM users WHERE employee_code = ? LIMIT 1',
+      [cleanNis]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: `Siswa dengan NIS ${cleanNis} sudah terdaftar!` });
+    }
+
+    // Role ID 4 = Employee / Siswa
+    const [result] = await db.query(
+      `INSERT INTO users (role_id, employee_code, full_name, email, password_hash, phone_number, status)
+       VALUES (4, ?, ?, ?, ?, '', 'active')`,
+      [cleanNis, cleanFullName, cleanEmail, defaultPasswordHash]
+    );
+
+    const newStudentId = result.insertId;
+
+    res.status(201).json({
+      success: true,
+      message: 'Data siswa berhasil ditambahkan!',
+      student: {
+        id: newStudentId,
+        noAbsen: cleanNis,
+        full_name: cleanFullName,
+        gender: jenisKelamin || 'Laki-laki',
+        picketDay: picketDay || 'Senin',
+        status: ''
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Gagal menambahkan siswa: ' + error.message });
   }
 });
 
@@ -333,8 +396,10 @@ app.get('/api/attendance/export/excel', async (req, res) => {
         COALESCE(pr.status, 'Belum Absen') AS status,
         COALESCE(pr.area_name, 'Kelas') AS mata_pelajaran
       FROM users u
+      LEFT JOIN roles r ON u.role_id = r.id
       LEFT JOIN picket_reports pr 
         ON u.id = pr.user_id AND pr.picket_date = CURDATE()
+      WHERE LOWER(COALESCE(r.name, '')) IN ('murid', 'siswa', 'employee') OR u.role_id = 4
       ORDER BY u.id ASC
     `);
 

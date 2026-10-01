@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, CheckCircle2, History, Send, ChevronRight, X, Clock, Calendar, Eye } from 'lucide-react';
 
-export default function PicketSchedulePage({ currentUser, onNavigate }) {
+export default function PicketSchedulePage({ currentUser, onNavigate, onStudentAdded }) {
   // Tab: 'jadwal' | 'kirim' | 'riwayat' (default: 'kirim' seperti di screenshot)
   const [activeTab, setActiveTab] = useState('kirim');
   const [selectedDay, setSelectedDay] = useState('Senin');
@@ -45,8 +45,8 @@ export default function PicketSchedulePage({ currentUser, onNavigate }) {
     }
   ]);
 
-  // Data Jadwal Piket per Hari
-  const scheduleData = {
+  // Data Jadwal Piket per Hari (State Dinamis)
+  const [scheduleData, setScheduleData] = useState({
     Senin: [
       { no: '01', name: 'Aditya Pratama', noAbsen: '01' },
       { no: '02', name: 'Muhammad Reza Auditore', noAbsen: '19' },
@@ -74,6 +74,29 @@ export default function PicketSchedulePage({ currentUser, onNavigate }) {
       { no: '01', name: 'Bayu Skak', noAbsen: '09' },
       { no: '02', name: 'Celine Evangelista', noAbsen: '10' },
     ]
+  });
+
+  const handleStudentCreated = (newStudent) => {
+    const targetDay = newStudent.picketDay || selectedDay;
+    setScheduleData(prev => {
+      const currentList = prev[targetDay] || [];
+      const newIndex = String(currentList.length + 1).padStart(2, '0');
+      return {
+        ...prev,
+        [targetDay]: [
+          ...currentList,
+          {
+            no: newIndex,
+            name: newStudent.full_name,
+            noAbsen: newStudent.noAbsen
+          }
+        ]
+      };
+    });
+
+    if (onStudentAdded) {
+      onStudentAdded(newStudent);
+    }
   };
 
   // Update real-time clock
