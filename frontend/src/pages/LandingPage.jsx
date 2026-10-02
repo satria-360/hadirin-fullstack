@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, ArrowUpRight, SquareArrowOutUpRight } from 'lucide-react';
+import { ArrowUpRight, SquareArrowOutUpRight } from 'lucide-react';
 import HeroArtwork from '../components/HeroArtwork';
 import LaptopIllustration from '../components/LaptopIllustration';
 
@@ -21,11 +21,12 @@ export default function LandingPage({ onNavigate }) {
             </p>
 
             <div className="pt-2">
+              {/* ✅ Tombol hero diganti jadi "Coba Sekarang" dan diarahkan ke LOGIN */}
               <button
-                onClick={() => onNavigate && onNavigate('fitur')}
+                onClick={() => onNavigate && onNavigate('login')}
                 className="inline-flex items-center gap-2.5 bg-white text-[#0047b3] font-bold text-sm sm:text-base px-6 sm:px-7 py-3.5 rounded-[16px] shadow-xl hover:bg-slate-50 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
               >
-                Pelajari Lebih Lanjut
+                Coba Sekarang
                 <SquareArrowOutUpRight className="w-4 h-4 stroke-[2.5]" />
               </button>
             </div>
@@ -41,18 +42,13 @@ export default function LandingPage({ onNavigate }) {
       {/* 2. BENEFIT / FEATURE SECTION */}
       <section className="py-20 md:py-28">
         <div className="w-full max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-12 items-center">
-
-          {/* Left Illustration */}
           <div className="flex justify-center lg:justify-start order-2 lg:order-1">
             <LaptopIllustration />
           </div>
-
-          {/* Right Text Content */}
           <div className="space-y-5 max-w-xl text-left order-1 lg:order-2">
             <h2 className="text-3xl sm:text-4xl lg:text-[2.65rem] font-bold text-white leading-[1.2] tracking-tight">
               Rekap kehadiran siswa dengan lebih mudah, akurat, dan aman.
             </h2>
-
             <p className="text-slate-200/85 text-sm sm:text-base leading-relaxed">
               Tinggalkan tumpukan buku absen yang rawan lecek atau hilang, beralih ke rekap digital yang bisa diakses kapan saja, di mana saja
             </p>
@@ -60,20 +56,34 @@ export default function LandingPage({ onNavigate }) {
         </div>
       </section>
 
-      {/* 3. HUBUNGI KAMI / CONTACT CARD SECTION */}
+      {/* ✅ 3. SECTION BARU: "TUNGGU APA LAGI?" — sesuai screenshot, tombolnya ke LOGIN */}
+      <section className="py-16 md:py-24">
+        <div className="w-full max-w-3xl mx-auto px-6 md:px-12 text-center space-y-8">
+          <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-bold text-white tracking-tight leading-tight">
+            Tunggu Apa Lagi?
+          </h2>
+          <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-xl mx-auto">
+            Tingkatkan kehadiran siswa dengan sistem modern yang mudah dan aman.
+          </p>
+          <button
+            onClick={() => onNavigate && onNavigate('login')}
+            className="w-full py-4 bg-gradient-to-r from-white to-[#999999] text-[#1A1A1A] text-lg font-bold rounded-3xl hover:opacity-90 active:scale-[0.98] transition-all inline-block cursor-pointer"
+          >
+            Coba Sekarang ↗
+          </button>
+        </div>
+      </section>
+
+      {/* 4. HUBUNGI KAMI / CONTACT CARD SECTION */}
       <section className="py-12 md:py-16">
         <div className="w-full max-w-7xl mx-auto px-6 md:px-12">
           <div className="w-full bg-white/[0.08] backdrop-blur-2xl border border-white/15 rounded-3xl p-8 sm:p-12 md:p-14 shadow-[0_20px_50px_rgba(0,0,0,0.55)] drop-shadow-[0_20px_25px_rgba(0,0,0,0.4)] space-y-8">
-
-            {/* Title with Arrow Icon */}
             <div className="flex items-center gap-3">
               <h3 className="text-3xl sm:text-4xl md:text-[2.75rem] font-bold text-white tracking-tight">
                 Hubungi Kami
               </h3>
               <ArrowUpRight className="w-8 h-8 sm:w-10 sm:h-10 text-white stroke-[2.5]" />
             </div>
-
-            {/* Contact Details */}
             <div className="space-y-6 pt-2">
               <div>
                 <h4 className="text-white font-bold text-base sm:text-lg">Email</h4>
@@ -84,7 +94,6 @@ export default function LandingPage({ onNavigate }) {
                   hadirin.co@gmail.com
                 </a>
               </div>
-
               <div>
                 <h4 className="text-white font-bold text-base sm:text-lg">Our Office</h4>
                 <p className="text-slate-300 text-xs sm:text-sm mt-0.5 leading-relaxed max-w-xl">
@@ -92,7 +101,6 @@ export default function LandingPage({ onNavigate }) {
                 </p>
               </div>
             </div>
-
           </div>
         </div>
       </section>

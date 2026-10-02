@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
 
 export default function LoginPage({ onNavigate, onLoginSuccess }) {
-  // Mode: 'login' | 'selectRole' | 'registerMurid' | 'registerGuru' | 'resetPassword'
   const [mode, setMode] = useState('login');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Form states - Login
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
-  // Form states - Register Guru
   const [guruForm, setGuruForm] = useState({
     firstName: '',
     lastName: '',
@@ -25,7 +22,6 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
     agreeTerms: false
   });
 
-  // Form states - Register Murid
   const [muridForm, setMuridForm] = useState({
     firstName: '',
     lastName: '',
@@ -48,7 +44,6 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
     setMode(newMode);
   };
 
-  // 1. Submit Handler: Login
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     clearAlerts();
@@ -72,7 +67,6 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
         throw new Error(data.message || 'Login gagal, periksa email dan kata sandi Anda.');
       }
 
-      // Berhasil login
       if (onLoginSuccess) {
         onLoginSuccess(data.user, data.token);
       } else if (onNavigate) {
@@ -85,7 +79,6 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
     }
   };
 
-  // 2. Submit Handler: Register Guru
   const handleRegisterGuruSubmit = async (e) => {
     e.preventDefault();
     clearAlerts();
@@ -133,7 +126,6 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
     }
   };
 
-  // 3. Submit Handler: Register Murid
   const handleRegisterMuridSubmit = async (e) => {
     e.preventDefault();
     clearAlerts();
@@ -181,19 +173,14 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
     }
   };
 
-  // ----------------------------------------------------
-  // TAMPILAN: RESET PASSWORD
-  // ----------------------------------------------------
   if (mode === 'resetPassword') {
     return (
       <div className="w-full min-h-screen flex flex-col md:flex-row font-sans m-0 p-0 overflow-hidden">
-        {/* SISI KIRI (FORM RESET - BIRU) */}
         <div className="w-full md:w-1/2 bg-[#082052] text-white p-8 md:p-16 flex flex-col justify-between relative min-h-screen">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate && onNavigate('landing')}>
             <span className="text-3xl font-black tracking-tighter text-white">R</span>
           </div>
 
-          {/* STEPPER DOTS */}
           <div className="absolute left-6 top-1/2 -translate-y-1/2 hidden md:flex flex-col items-center gap-12 text-gray-400">
             <div className="w-3 h-3 rounded-full border-2 border-white/60"></div>
             <div className="w-3 h-3 rounded-full border-2 border-white/60"></div>
@@ -252,7 +239,6 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
           <div className="h-6"></div>
         </div>
 
-        {/* SISI KANAN (WELCOME SCREEN - KREM) */}
         <div className="w-full md:w-1/2 bg-[#F5EFEB] text-[#082052] p-8 md:p-16 flex flex-col items-center justify-center text-center min-h-screen">
           <div className="max-w-md space-y-3">
             <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
@@ -267,13 +253,9 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
     );
   }
 
-  // ----------------------------------------------------
-  // TAMPILAN: REGISTER GURU / WALI KELAS
-  // ----------------------------------------------------
   if (mode === 'registerGuru') {
     return (
       <div className="w-full min-h-screen flex flex-col md:flex-row font-sans m-0 p-0 overflow-hidden">
-        {/* SISI KIRI (WELCOME - KREM) */}
         <div className="w-full md:w-1/2 bg-[#F5EFEB] text-[#082052] p-8 md:p-16 flex flex-col justify-between relative min-h-screen">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate && onNavigate('landing')}>
             <span className="text-3xl font-black tracking-tighter text-gray-400">R</span>
@@ -291,9 +273,7 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
           <div className="h-6"></div>
         </div>
 
-        {/* SISI KANAN (FORM GURU - BIRU) */}
         <div className="w-full md:w-1/2 bg-[#082052] text-white p-6 md:p-12 flex flex-col justify-center items-center relative min-h-screen overflow-y-auto">
-          {/* STEPPER DOTS */}
           <div className="absolute right-6 top-1/2 -translate-y-1/2 hidden md:flex flex-col items-center gap-10">
             <div className="w-3 h-3 rounded-full border-2 border-white/40"></div>
             <div className="w-3.5 h-3.5 rounded-full border-2 border-white bg-white shadow-md"></div>
@@ -309,7 +289,6 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
             )}
 
             <form className="space-y-3" onSubmit={handleRegisterGuruSubmit}>
-              {/* NAMA DEPAN & BELAKANG */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1 text-left">
                   <label className="text-[11px] text-gray-300 font-medium">Nama Depan *</label>
@@ -334,7 +313,6 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
                 </div>
               </div>
 
-              {/* KELAS YANG DIAMPU */}
               <div className="space-y-1 text-left">
                 <label className="text-[11px] text-gray-300 font-medium">Kelas Yang Diampu</label>
                 <input
@@ -346,19 +324,19 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
                 />
               </div>
 
-              {/* JURUSAN */}
               <div className="space-y-1 text-left">
-                <label className="text-[11px] text-gray-300 font-medium">Jurusan (Gunakan CapsLock)</label>
+                <label className="text-[11px] text-gray-300 font-medium">NUPTK</label>
                 <input
                   type="text"
-                  placeholder="TEKNIK KOMPUTER JARINGAN"
+                  inputMode="numeric"
+                  maxLength={18}
+                  placeholder="Contoh: 198701012015031002"
                   value={guruForm.jurusan}
                   onChange={(e) => setGuruForm({ ...guruForm, jurusan: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50 uppercase"
+                  className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
                 />
               </div>
 
-              {/* EMAIL */}
               <div className="space-y-1 text-left">
                 <label className="text-[11px] text-gray-300 font-medium">Email *</label>
                 <input
@@ -371,11 +349,10 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
                 />
               </div>
 
-              {/* NOMOR TELEPON */}
               <div className="space-y-1 text-left">
                 <label className="text-[11px] text-gray-300 font-medium">Nomor Telepon</label>
                 <div className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/20 rounded-xl">
-                  <span className="text-xs">🇮🇩</span>
+                  <span className="text-xs">🇮</span>
                   <span className="text-xs text-gray-300">+62</span>
                   <input
                     type="tel"
@@ -387,7 +364,6 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
                 </div>
               </div>
 
-              {/* PASSWORD */}
               <div className="space-y-1 text-left relative">
                 <label className="text-[11px] text-gray-300 font-medium">Password *</label>
                 <div className="relative">
@@ -407,18 +383,17 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
                   >
                     {showPassword ? (
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
-                        <path d="M12 4.5C7 4.5 2.7 7.6 1 12c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5c-1.7-4.4-6-7.5-11-7.5zm0 12.5c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3z"/>
+                        <path d="M12 4.5C7 4.5 2.7 7.6 1 12c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5c-1.7-4.4-6-7.5-11-7.5zm0 12.5c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3z" />
                       </svg>
                     ) : (
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
-                        <path d="M12 17.5c-3.8 0-7.2-2.1-8.8-5.5H1c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5h-2.2c-1.6 3.4-5 5.5-8.8 5.5"/>
+                        <path d="M12 17.5c-3.8 0-7.2-2.1-8.8-5.5H1c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5h-2.2c-1.6 3.4-5 5.5-8.8 5.5" />
                       </svg>
                     )}
                   </button>
                 </div>
               </div>
 
-              {/* KONFIRMASI PASSWORD */}
               <div className="space-y-1 text-left">
                 <label className="text-[11px] text-gray-300 font-medium">Konfirmasi Password *</label>
                 <input
@@ -431,7 +406,6 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
                 />
               </div>
 
-              {/* TOMBOL SELANJUTNYA */}
               <button
                 type="submit"
                 disabled={loading}
@@ -440,7 +414,6 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
                 {loading ? 'Mendaftarkan...' : 'Daftar Sebagai Wali Kelas / Guru'}
               </button>
 
-              {/* CHECKBOX SYARAT & KETENTUAN */}
               <div className="flex items-center justify-center gap-2 pt-2">
                 <input
                   type="checkbox"
@@ -470,9 +443,6 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
     );
   }
 
-  // ----------------------------------------------------
-  // TAMPILAN: REGISTER FORM MURID
-  // ----------------------------------------------------
   if (mode === 'registerMurid') {
     return (
       <div className="w-full min-h-screen flex flex-col md:flex-row font-sans m-0 p-0 overflow-hidden">
@@ -564,11 +534,11 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
                   >
                     {showPassword ? (
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
-                        <path d="M12 4.5C7 4.5 2.7 7.6 1 12c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5c-1.7-4.4-6-7.5-11-7.5zm0 12.5c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3z"/>
+                        <path d="M12 4.5C7 4.5 2.7 7.6 1 12c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5c-1.7-4.4-6-7.5-11-7.5zm0 12.5c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3z" />
                       </svg>
                     ) : (
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
-                        <path d="M12 17.5c-3.8 0-7.2-2.1-8.8-5.5H1c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5h-2.2c-1.6 3.4-5 5.5-8.8 5.5"/>
+                        <path d="M12 17.5c-3.8 0-7.2-2.1-8.8-5.5H1c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5h-2.2c-1.6 3.4-5 5.5-8.8 5.5" />
                       </svg>
                     )}
                   </button>
@@ -590,7 +560,7 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
               <div className="space-y-1 text-left">
                 <label className="text-[11px] text-gray-300 font-medium">Nomor Telepon</label>
                 <div className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/20 rounded-xl">
-                  <span className="text-xs">🇮🇩</span>
+                  <span className="text-xs">🇮</span>
                   <span className="text-xs text-gray-300">+62</span>
                   <input
                     type="tel"
@@ -663,9 +633,6 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
     );
   }
 
-  // ----------------------------------------------------
-  // TAMPILAN: PILIH PERAN
-  // ----------------------------------------------------
   if (mode === 'selectRole') {
     return (
       <div className="w-full min-h-screen flex flex-col md:flex-row font-sans m-0 p-0 overflow-hidden">
@@ -743,9 +710,6 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
     );
   }
 
-  // ----------------------------------------------------
-  // TAMPILAN: LOGIN (UTAMA)
-  // ----------------------------------------------------
   return (
     <div className="w-full min-h-screen flex flex-col md:flex-row font-sans m-0 p-0 overflow-hidden">
       <div className="w-full md:w-1/2 bg-[#082052] text-white p-8 md:p-16 flex flex-col justify-between relative min-h-screen">
@@ -767,7 +731,6 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
             </div>
           )}
 
-          {/* FORM LOGIN */}
           <form className="space-y-4" onSubmit={handleLoginSubmit}>
             <div className="space-y-1 text-left">
               <label className="text-xs text-gray-300 font-medium">Email</label>
@@ -800,11 +763,11 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
                 >
                   {showPassword ? (
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
-                      <path d="M12 4.5C7 4.5 2.7 7.6 1 12c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5c-1.7-4.4-6-7.5-11-7.5zm0 12.5c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3z"/>
+                      <path d="M12 4.5C7 4.5 2.7 7.6 1 12c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5c-1.7-4.4-6-7.5-11-7.5zm0 12.5c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3z" />
                     </svg>
                   ) : (
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
-                      <path d="M12 17.5c-3.8 0-7.2-2.1-8.8-5.5H1c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5h-2.2c-1.6 3.4-5 5.5-8.8 5.5"/>
+                      <path d="M12 17.5c-3.8 0-7.2-2.1-8.8-5.5H1c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5h-2.2c-1.6 3.4-5 5.5-8.8 5.5" />
                     </svg>
                   )}
                 </button>

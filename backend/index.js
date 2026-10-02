@@ -12,33 +12,66 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 1. Koneksi ke MySQL db_hadirin
 const db = mysql.createPool({
   host: 'localhost',
   user: 'root',
-  password: '', // Isi password mysql jika ada
+  password: '',
   database: 'db_hadirin',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
 });
 
-// Tes Koneksi
 (async () => {
   try {
     const connection = await db.getConnection();
-    console.log('✅ Berhasil terhubung ke database db_hadirin!');
+    console.log('Berhasil terhubung ke database db_hadirin!');
     connection.release();
   } catch (error) {
-    console.error('❌ Gagal terhubung ke database:', error.message);
+    console.error('Gagal terhubung ke database:', error.message);
   }
 })();
 
-// ==========================================
-// ENDPOINT AUTENTIKASI (LOGIN & REGISTER)
-// ==========================================
+function generateClassCode(len = 6) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
 
-// 1. POST /api/auth/login
+async function createUniqueClassCode(connection, name, teacherId) {
+  const safeName = (name || 'Kelas Baru').toString().trim().slice(0, 120) || 'Kelas Baru';
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const code = generateClassCode();
+    try {
+      const [r] = await connection.query(
+        'INSERT INTO classes (name, access_code, teacher_id) VALUES (?, ?, ?)',
+        [safeName, code, teacherId ?? null]
+      );
+      return { id: r.insertId, code, name: safeName };
+    } catch (e) {
+      if (e.code !== 'ER_DUP_ENTRY') throw e;
+    }
+  }
+  throw new Error('Gagal membuat kode kelas yang unik.');
+}
+
+async function getClassInfo(user) {
+  if (!user) return {};
+  if (user.role_id === 3) {
+    const [r] = await db.query(
+      'SELECT id, name, access_code FROM classes WHERE teacher_id = ? LIMIT 1',
+      [user.id]
+    );
+    return r.length ? { class_id: r[0].id, class_name: r[0].name, class_code: r[0].access_code } : {};
+  }
+  if (user.class_id) {
+    const [r] = await db.query('SELECT id, name FROM classes WHERE id = ? LIMIT 1', [user.class_id]);
+    return r.length ? { class_id: r[0].id, class_name: r[0].name } : {};
+  }
+  return {};
+}
+
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -48,9 +81,9 @@ app.post('/api/auth/login', async (req, res) => {
 
   try {
     const [rows] = await db.query(
-      `SELECT u.*, r.name AS role_name 
-       FROM users u 
-       JOIN roles r ON u.role_id = r.id 
+      `SELECT u.*, r.name AS role_name
+       FROM users u
+       JOIN roles r ON u.role_id = r.id
        WHERE u.email = ? LIMIT 1`,
       [email.trim().toLowerCase()]
     );
@@ -61,7 +94,6 @@ app.post('/api/auth/login', async (req, res) => {
 
     const user = rows[0];
 
-    // Cek password hash menggunakan bcrypt
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordValid) {
       return res.status(401).json({ success: false, message: 'Email atau password salah!' });
@@ -71,7 +103,12 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(403).json({ success: false, message: 'Akun Anda sedang dinonaktifkan.' });
     }
 
-    // Buat JWT Token
+    let classPayload = await getClassInfo(user);
+    if (user.role_id === 3 && !classPayload.class_id) {
+      const created = await createUniqueClassCode(db, 'Kelas ' + (user.full_name || ''), user.id);
+      classPayload = { class_id: created.id, class_name: created.name, class_code: created.code };
+    }
+
     const token = jwt.sign(
       {
         id: user.id,
@@ -96,7 +133,8 @@ app.post('/api/auth/login', async (req, res) => {
         phone_number: user.phone_number,
         role_id: user.role_id,
         role_name: user.role_name,
-        avatar_url: user.avatar_url
+        avatar_url: user.avatar_url,
+        ...classPayload
       }
     });
   } catch (error) {
@@ -104,10 +142,9 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// 2. POST /api/auth/register
 app.post('/api/auth/register', async (req, res) => {
   const {
-    role, // 'murid' atau 'guru'
+    role,
     firstName,
     lastName,
     email,
@@ -115,71 +152,74 @@ app.post('/api/auth/register', async (req, res) => {
     phoneNumber,
     nisn,
     kodeKelas,
-    kelasAmampu,
-    jurusan
+    kelasAmampu
   } = req.body;
 
   if (!email || !password || !firstName) {
     return res.status(400).json({ success: false, message: 'Data pendaftaran belum lengkap!' });
   }
 
-  // Jika mendaftar sebagai Siswa / Murid, wajib memasukkan Kode Kelas valid dari Wali Kelas
-  if (role === 'murid') {
-    const VALID_CLASS_CODE = 'GAJBHG';
-    if (!kodeKelas || kodeKelas.trim().toUpperCase() !== VALID_CLASS_CODE) {
-      return res.status(400).json({
-        success: false,
-        message: 'Kode Kelas tidak valid! Harap minta kode kelas yang sesuai dari Wali Kelas Anda.'
-      });
-    }
-  }
-
   try {
     const cleanEmail = email.trim().toLowerCase();
 
-    // Periksa apakah email sudah terdaftar
     const [existing] = await db.query('SELECT id FROM users WHERE email = ? LIMIT 1', [cleanEmail]);
     if (existing.length > 0) {
       return res.status(400).json({ success: false, message: 'Email sudah terdaftar!' });
     }
 
-    // Role mapping:
-    // role 'guru' => Supervisor/Wali Kelas (ID: 3)
-    // role 'murid' => Employee/Siswa (ID: 4)
     const roleId = role === 'guru' ? 3 : 4;
-
     const fullName = `${firstName.trim()} ${lastName ? lastName.trim() : ''}`.trim();
-    const employeeCode = (role === 'murid' && nisn)
-      ? nisn.trim()
-      : `USR-${Date.now().toString().slice(-6)}`;
+    const passwordHash = await bcrypt.hash(password, 10);
 
-    // Hash password dengan bcrypt
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
+    let employeeCode;
+    let classId = null;
+    let freshClass = null;
+
+    if (role === 'murid') {
+      const code = (kodeKelas || '').trim().toUpperCase();
+      if (!code) {
+        return res.status(400).json({ success: false, message: 'Kode Kelas wajib diisi. Minta kode dari Wali Kelas Anda.' });
+      }
+      const [cls] = await db.query('SELECT id FROM classes WHERE access_code = ? LIMIT 1', [code]);
+      if (!cls.length) {
+        return res.status(400).json({
+          success: false,
+          message: 'Kode Kelas tidak valid! Harap minta kode kelas yang sesuai dari Wali Kelas Anda.'
+        });
+      }
+      classId = cls[0].id;
+      employeeCode = (nisn && nisn.trim()) ? nisn.trim() : `USR-${Date.now().toString().slice(-6)}`;
+    } else {
+      employeeCode = `USR-${Date.now().toString().slice(-6)}`;
+    }
 
     const [result] = await db.query(
-      `INSERT INTO users (role_id, employee_code, full_name, email, password_hash, phone_number, status)
-       VALUES (?, ?, ?, ?, ?, ?, 'active')`,
-      [roleId, employeeCode, fullName, cleanEmail, passwordHash, phoneNumber || '']
+      `INSERT INTO users (role_id, class_id, employee_code, full_name, email, password_hash, phone_number, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'active')`,
+      [roleId, classId, employeeCode, fullName, cleanEmail, passwordHash, phoneNumber || '']
     );
-
     const newUserId = result.insertId;
 
-    // Ambil nama role
+    if (role === 'guru') {
+      const className = (kelasAmampu || '').trim() || ('Kelas ' + fullName);
+      freshClass = await createUniqueClassCode(db, className, newUserId);
+    }
+
     const [roleRows] = await db.query('SELECT name FROM roles WHERE id = ?', [roleId]);
     const roleName = roleRows.length > 0 ? roleRows[0].name : 'User';
 
     const token = jwt.sign(
-      {
-        id: newUserId,
-        email: cleanEmail,
-        full_name: fullName,
-        role_id: roleId,
-        role_name: roleName
-      },
+      { id: newUserId, email: cleanEmail, full_name: fullName, role_id: roleId, role_name: roleName },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
+
+    let classPayload = {};
+    if (role === 'guru' && freshClass) {
+      classPayload = { class_id: freshClass.id, class_name: freshClass.name, class_code: freshClass.code };
+    } else if (role === 'murid' && classId) {
+      classPayload = { class_id: classId };
+    }
 
     res.status(201).json({
       success: true,
@@ -192,7 +232,8 @@ app.post('/api/auth/register', async (req, res) => {
         email: cleanEmail,
         phone_number: phoneNumber || '',
         role_id: roleId,
-        role_name: roleName
+        role_name: roleName,
+        ...classPayload
       }
     });
   } catch (error) {
@@ -200,7 +241,6 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// 3. GET /api/auth/me (Cek info login saat ini)
 app.get('/api/auth/me', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -211,7 +251,7 @@ app.get('/api/auth/me', async (req, res) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const [rows] = await db.query(
-      `SELECT u.id, u.employee_code, u.full_name, u.email, u.phone_number, u.avatar_url, u.status, r.name AS role_name
+      `SELECT u.id, u.employee_code, u.full_name, u.email, u.phone_number, u.avatar_url, u.status, u.role_id, u.class_id, r.name AS role_name
        FROM users u
        JOIN roles r ON u.role_id = r.id
        WHERE u.id = ? LIMIT 1`,
@@ -222,40 +262,67 @@ app.get('/api/auth/me', async (req, res) => {
       return res.status(404).json({ success: false, message: 'User tidak ditemukan.' });
     }
 
-    res.json({ success: true, user: rows[0] });
+    const classInfo = await getClassInfo(rows[0]);
+    res.json({ success: true, user: { ...rows[0], ...classInfo } });
   } catch (error) {
     res.status(401).json({ success: false, message: 'Sesi kedaluwarsa atau token tidak valid.' });
   }
 });
 
-// 2. GET API: Ambil Daftar Siswa & Status Piket Hari Ini (Hanya role Siswa/Murid)
 app.get('/api/picket/dashboard', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Token tidak ditemukan!' });
+  }
   try {
+    const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+    
+    // Cari class_id milik guru (dari tabel classes) atau dari data user murid (class_id)
+    let classId = null;
+    const [tc] = await db.query('SELECT id FROM classes WHERE teacher_id = ? LIMIT 1', [decoded.id]);
+    if (tc.length > 0) {
+      classId = tc[0].id;
+    } else {
+      const [u] = await db.query('SELECT class_id FROM users WHERE id = ? LIMIT 1', [decoded.id]);
+      if (u.length > 0) classId = u[0].class_id;
+    }
+
+    if (!classId) return res.json([]);
+
+    // Ambil data siswa yang memang ditambahkan sebagai data siswa kelas (is_student_entry = 1)
     const [rows] = await db.query(`
       SELECT 
         u.id, 
+        u.employee_code AS nis,
         u.employee_code AS noAbsen, 
         u.full_name, 
-        pr.status,
-        pr.notes,
+        COALESCE(pr.status, '') AS status, 
+        pr.notes, 
         pp.photo_url
       FROM users u
-      LEFT JOIN roles r ON u.role_id = r.id
-      LEFT JOIN picket_reports pr 
-        ON u.id = pr.user_id AND pr.picket_date = CURDATE()
-      LEFT JOIN picket_photos pp 
-        ON pr.id = pp.picket_report_id
-      WHERE LOWER(COALESCE(r.name, '')) IN ('murid', 'siswa', 'employee') OR u.role_id = 4
+      LEFT JOIN picket_reports pr ON u.id = pr.user_id AND pr.picket_date = CURDATE()
+      LEFT JOIN picket_photos pp ON pr.id = pp.picket_report_id
+      WHERE u.class_id = ? AND u.role_id = 4 AND u.is_student_entry = 1
       ORDER BY u.id ASC
-    `);
-    res.json(rows);
+    `, [classId]);
+
+    // Tambahkan nomor urut urut 01, 02, ... agar tampilan rapi
+    const formattedRows = rows.map((r, index) => ({
+      ...r,
+      noUrut: String(index + 1).padStart(2, '0')
+    }));
+
+    res.json(formattedRows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// 2b. POST API: Tambah Siswa Baru (Absensi & Jadwal Piket)
 app.post('/api/students/create', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Token tidak ditemukan!' });
+  }
   const { fullName, nis, jenisKelamin, picketDay } = req.body;
 
   if (!fullName || !nis) {
@@ -263,36 +330,66 @@ app.post('/api/students/create', async (req, res) => {
   }
 
   try {
+    const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+    
+    // Cari kelas yang terhubung dengan pengguna saat ini (Bisa Guru atau Murid/Ketua Murid)
+    let classId = null;
+    const [gc] = await db.query('SELECT id FROM classes WHERE teacher_id = ? LIMIT 1', [decoded.id]);
+    if (gc.length > 0) {
+      classId = gc[0].id;
+    } else {
+      const [u] = await db.query('SELECT class_id, full_name, role_id FROM users WHERE id = ? LIMIT 1', [decoded.id]);
+      if (u.length > 0 && u[0].class_id) {
+        classId = u[0].class_id;
+      } else if (u.length > 0 && u[0].role_id === 3) {
+        // Jika guru belum memiliki kelas, buatkan otomatis
+        const created = await createUniqueClassCode(db, 'Kelas ' + (u[0].full_name || ''), decoded.id);
+        classId = created.id;
+      }
+    }
+
+    if (!classId) {
+      return res.status(400).json({ success: false, message: 'Kelas tidak ditemukan. Pastikan akun terhubung ke kelas yang valid.' });
+    }
+
     const cleanFullName = fullName.trim();
     const cleanNis = String(nis).trim();
     const cleanEmail = `siswa_${cleanNis}_${Date.now().toString().slice(-4)}@hadirin.co`;
     const defaultPasswordHash = await bcrypt.hash('123456', 10);
 
-    // Cek apakah NIS / employee_code sudah ada
+    // Cek apakah NIS sudah terdaftar di kelas ini
     const [existing] = await db.query(
-      'SELECT id FROM users WHERE employee_code = ? LIMIT 1',
-      [cleanNis]
+      'SELECT id FROM users WHERE employee_code = ? AND class_id = ? AND is_student_entry = 1 LIMIT 1',
+      [cleanNis, classId]
     );
-
     if (existing.length > 0) {
-      return res.status(400).json({ success: false, message: `Siswa dengan NIS ${cleanNis} sudah terdaftar!` });
+      return res.status(400).json({ success: false, message: `Siswa dengan NIS ${cleanNis} sudah terdaftar di kelas Anda!` });
     }
 
-    // Role ID 4 = Employee / Siswa
+    // Role ID 4 = Murid, is_student_entry = 1 (Tanda data siswa kelas yang ditambahkan via form)
     const [result] = await db.query(
-      `INSERT INTO users (role_id, employee_code, full_name, email, password_hash, phone_number, status)
-       VALUES (4, ?, ?, ?, ?, '', 'active')`,
-      [cleanNis, cleanFullName, cleanEmail, defaultPasswordHash]
+      `INSERT INTO users (role_id, class_id, employee_code, full_name, email, password_hash, phone_number, status, is_student_entry)
+       VALUES (4, ?, ?, ?, ?, ?, '', 'active', 1)`,
+      [classId, cleanNis, cleanFullName, cleanEmail, defaultPasswordHash]
     );
 
     const newStudentId = result.insertId;
 
+    // Hitung total siswa saat ini untuk noUrut
+    const [countRows] = await db.query(
+      'SELECT COUNT(*) as total FROM users WHERE class_id = ? AND role_id = 4 AND is_student_entry = 1',
+      [classId]
+    );
+    const noUrut = String(countRows[0].total).padStart(2, '0');
+
     res.status(201).json({
       success: true,
-      message: 'Data siswa berhasil ditambahkan!',
+      message: 'Data siswa berhasil ditambahkan ke tabel users!',
       student: {
         id: newStudentId,
+        nis: cleanNis,
         noAbsen: cleanNis,
+        noUrut: noUrut,
         full_name: cleanFullName,
         gender: jenisKelamin || 'Laki-laki',
         picketDay: picketDay || 'Senin',
@@ -304,12 +401,10 @@ app.post('/api/students/create', async (req, res) => {
   }
 });
 
-// 3. POST API: Update Status Piket / Absen Siswa
 app.post('/api/picket/upload', async (req, res) => {
   const { student_id, status, area_name, notes, photo_url } = req.body;
 
   try {
-    // Cek apakah sudah ada rekap piket hari ini
     const [existing] = await db.query(
       'SELECT id FROM picket_reports WHERE user_id = ? AND picket_date = CURDATE()',
       [student_id]
@@ -331,7 +426,6 @@ app.post('/api/picket/upload', async (req, res) => {
       reportId = insertResult.insertId;
     }
 
-    // Jika ada foto dikirim, masukkan ke picket_photos (Timestamp otomatis oleh database)
     if (photo_url) {
       await db.query(
         'INSERT INTO picket_photos (picket_report_id, photo_url, caption) VALUES (?, ?, ?)',
@@ -345,19 +439,18 @@ app.post('/api/picket/upload', async (req, res) => {
   }
 });
 
-// 4. GET API: Ekspor Data Piket ke Excel
 app.get('/api/reports/export/excel', async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT 
-        pr.picket_date, 
-        u.employee_code, 
-        u.full_name, 
-        pr.area_name, 
-        pr.status, 
-        pr.notes 
-      FROM picket_reports pr 
-      JOIN users u ON pr.user_id = u.id 
+      SELECT
+        pr.picket_date,
+        u.employee_code,
+        u.full_name,
+        pr.area_name,
+        pr.status,
+        pr.notes
+      FROM picket_reports pr
+      JOIN users u ON pr.user_id = u.id
       ORDER BY pr.picket_date DESC
     `);
 
@@ -385,19 +478,18 @@ app.get('/api/reports/export/excel', async (req, res) => {
   }
 });
 
-// 4b. GET API: Ekspor Rekap Absensi Siswa ke Excel
 app.get('/api/attendance/export/excel', async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT 
+      SELECT
         CURDATE() AS tanggal,
-        u.employee_code, 
-        u.full_name, 
+        u.employee_code,
+        u.full_name,
         COALESCE(pr.status, 'Belum Absen') AS status,
         COALESCE(pr.area_name, 'Kelas') AS mata_pelajaran
       FROM users u
       LEFT JOIN roles r ON u.role_id = r.id
-      LEFT JOIN picket_reports pr 
+      LEFT JOIN picket_reports pr
         ON u.id = pr.user_id AND pr.picket_date = CURDATE()
       WHERE LOWER(COALESCE(r.name, '')) IN ('murid', 'siswa', 'employee') OR u.role_id = 4
       ORDER BY u.id ASC
@@ -414,7 +506,6 @@ app.get('/api/attendance/export/excel', async (req, res) => {
       { header: 'Status Kehadiran', key: 'status', width: 18 }
     ];
 
-    // Style header row
     worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     worksheet.getRow(1).fill = {
       type: 'pattern',
@@ -434,7 +525,6 @@ app.get('/api/attendance/export/excel', async (req, res) => {
   }
 });
 
-// 4c. POST API: Simpan Batch Rekap Absensi Hari Ini
 app.post('/api/attendance/save-all', async (req, res) => {
   const { students, subject } = req.body;
   if (!Array.isArray(students)) {
@@ -469,9 +559,8 @@ app.post('/api/attendance/save-all', async (req, res) => {
   }
 });
 
-// 4d. POST API: Batch Import Siswa / Status dari Excel
 app.post('/api/attendance/import-batch', async (req, res) => {
-  const { records } = req.body; // Array of { noAbsen, name, status }
+  const { records } = req.body;
   if (!Array.isArray(records)) {
     return res.status(400).json({ success: false, message: 'Data import tidak valid' });
   }
@@ -480,7 +569,6 @@ app.post('/api/attendance/import-batch', async (req, res) => {
     let importedCount = 0;
     for (const item of records) {
       if (item.name || item.noAbsen) {
-        // Cari user yang cocok
         const [users] = await db.query(
           'SELECT id FROM users WHERE employee_code = ? OR full_name LIKE ? LIMIT 1',
           [item.noAbsen || '', `%${item.name || ''}%`]
@@ -520,7 +608,6 @@ app.post('/api/attendance/import-batch', async (req, res) => {
   }
 });
 
-// 5. PUT API: Perbarui Profil Pengguna
 app.put('/api/users/profile', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -533,7 +620,7 @@ app.put('/api/users/profile', async (req, res) => {
     const { full_name, email, phone_number, avatar_url } = req.body;
 
     await db.query(
-      `UPDATE users 
+      `UPDATE users
        SET full_name = COALESCE(?, full_name),
            email = COALESCE(?, email),
            phone_number = COALESCE(?, phone_number),
@@ -543,24 +630,24 @@ app.put('/api/users/profile', async (req, res) => {
     );
 
     const [rows] = await db.query(
-      `SELECT u.id, u.employee_code, u.full_name, u.email, u.phone_number, u.avatar_url, u.status, r.name AS role_name
+      `SELECT u.id, u.employee_code, u.full_name, u.email, u.phone_number, u.avatar_url, u.status, u.role_id, u.class_id, r.name AS role_name
        FROM users u
        JOIN roles r ON u.role_id = r.id
        WHERE u.id = ? LIMIT 1`,
       [decoded.id]
     );
 
+    const classInfo = await getClassInfo(rows[0]);
     res.json({
       success: true,
       message: 'Profil berhasil diperbarui!',
-      user: rows[0]
+      user: { ...rows[0], ...classInfo }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Gagal memperbarui profil: ' + error.message });
   }
 });
 
-// 6. PUT API: Ubah Password Pengguna
 app.put('/api/users/change-password', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
