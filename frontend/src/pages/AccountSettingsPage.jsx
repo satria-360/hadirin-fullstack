@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateUser, onStudentAdded, onOpenAddStudent }) {
   const [studentAddedSuccess, setStudentAddedSuccess] = useState('');
-  // Parsing first and last name
+
   const getInitialNames = () => {
     const fullName = currentUser?.full_name || 'Sir Lewis Carl Davidson Hamilton';
     const parts = fullName.trim().split(' ');
@@ -37,7 +37,6 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
   const [saveMsg, setSaveMsg] = useState({ type: '', text: '' });
   const [isSaving, setIsSaving] = useState(false);
 
-  // Update form if currentUser prop changes
   useEffect(() => {
     if (currentUser) {
       const names = getInitialNames();
@@ -50,14 +49,12 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
     }
   }, [currentUser]);
 
-  // Handle Foto Profile Upload / Change
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarUrl(reader.result);
-        // Persist to user object / backend if available
         saveProfileData({ avatar_url: reader.result });
       };
       reader.readAsDataURL(file);
@@ -94,7 +91,6 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
           onUpdateUser(data.user);
         }
       } else {
-        // Fallback update in localStorage if endpoint not implemented or fails
         const updatedUser = {
           ...currentUser,
           full_name: fullName,
@@ -107,7 +103,6 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
         setSaveMsg({ type: 'success', text: 'Perubahan profil disimpan secara lokal!' });
       }
     } catch {
-      // Local fallback
       const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
       const updatedUser = {
         ...currentUser,
@@ -195,7 +190,7 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
 
       {/* Kartu Utama Berwarna Krem Lembut Persis Screenshot */}
       <div className="bg-[#F8F3ED] text-[#1E293B] rounded-3xl p-6 md:p-10 shadow-2xl relative max-w-4xl mx-auto border border-[#E9DFD5]">
-        
+
         {/* Menu titik tiga & icon search/zoom kecil di kanan atas */}
         <div className="absolute top-6 right-8 flex flex-col items-end gap-2 text-gray-400">
           <button className="text-gray-400 hover:text-gray-700 tracking-widest text-lg font-bold">
@@ -313,7 +308,6 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
               </label>
               <div className="relative flex items-center">
                 <div className="absolute left-3 flex items-center gap-1.5 pointer-events-none">
-                  {/* Bendera Merah Putih Indonesia */}
                   <span className="inline-block w-4 h-2.5 rounded-xs overflow-hidden border border-gray-300 shadow-xs">
                     <span className="block h-1/2 bg-red-600"></span>
                     <span className="block h-1/2 bg-white"></span>
@@ -361,24 +355,39 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
             Digunakan jika kamu ingin menambah data siswa baru
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <div className="space-y-3.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenAddStudent) onOpenAddStudent('absensi');
+                }}
+                className="w-full py-3 px-4 bg-[#1C1F23] hover:bg-black text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer text-center"
+              >
+                Tambah Data Absensi Siswa
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenAddStudent) onOpenAddStudent('piket');
+                }}
+                className="w-full py-3 px-4 bg-[#1C1F23] hover:bg-black text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer text-center"
+              >
+                Tambah Data Siswa Piket
+              </button>
+            </div>
+
+            {/* ✅ TAMBAHAN: Tombol Edit Data Siswa Full Width */}
             <button
               type="button"
               onClick={() => {
-                if (onOpenAddStudent) onOpenAddStudent('absensi');
+                alert('Fitur Edit Data Siswa akan segera hadir! Saat ini gunakan form tambah untuk memperbaiki data.');
+                // Jika nanti ada halaman/modal edit siswa, uncomment baris berikut:
+                // if (onEditStudent) onEditStudent();
               }}
-              className="w-full py-3 px-4 bg-[#1C1F23] hover:bg-black text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer text-center"
+              className="w-full py-3 px-4 bg-[#F5EFEB] border border-[#E4D8CE] hover:bg-white text-[#082052] text-xs font-bold rounded-xl shadow-sm transition cursor-pointer text-center"
             >
-              Tambah Data Absensi Siswa
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (onOpenAddStudent) onOpenAddStudent('piket');
-              }}
-              className="w-full py-3 px-4 bg-[#1C1F23] hover:bg-black text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer text-center"
-            >
-              Tambah Data Siswa Piket
+              Edit Data Siswa
             </button>
           </div>
         </div>
@@ -428,14 +437,12 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
               <button
                 type="button"
                 onClick={() => setNotifEmail(!notifEmail)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  notifEmail ? 'bg-emerald-500' : 'bg-gray-300'
-                }`}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${notifEmail ? 'bg-emerald-500' : 'bg-gray-300'
+                  }`}
               >
                 <span
-                  className={`pointer-events-none inline-flex items-center justify-center h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out text-[9px] font-bold text-gray-700 ${
-                    notifEmail ? 'translate-x-5' : 'translate-x-0'
-                  }`}
+                  className={`pointer-events-none inline-flex items-center justify-center h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out text-[9px] font-bold text-gray-700 ${notifEmail ? 'translate-x-5' : 'translate-x-0'
+                    }`}
                 >
                   {notifEmail ? 'ON' : 'OFF'}
                 </span>
@@ -455,14 +462,12 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
               <button
                 type="button"
                 onClick={() => setRekapAbsen(!rekapAbsen)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  rekapAbsen ? 'bg-emerald-500' : 'bg-gray-800'
-                }`}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${rekapAbsen ? 'bg-emerald-500' : 'bg-gray-800'
+                  }`}
               >
                 <span
-                  className={`pointer-events-none inline-flex items-center justify-center h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out text-[9px] font-bold text-gray-700 ${
-                    rekapAbsen ? 'translate-x-5' : 'translate-x-0'
-                  }`}
+                  className={`pointer-events-none inline-flex items-center justify-center h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out text-[9px] font-bold text-gray-700 ${rekapAbsen ? 'translate-x-5' : 'translate-x-0'
+                    }`}
                 >
                   {rekapAbsen ? 'ON' : 'OFF'}
                 </span>
@@ -530,11 +535,10 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
 
               {passwordMsg.text && (
                 <div
-                  className={`text-xs p-2.5 rounded-lg font-medium ${
-                    passwordMsg.type === 'success'
+                  className={`text-xs p-2.5 rounded-lg font-medium ${passwordMsg.type === 'success'
                       ? 'bg-emerald-100 text-emerald-800'
                       : 'bg-rose-100 text-rose-800'
-                  }`}
+                    }`}
                 >
                   {passwordMsg.text}
                 </div>

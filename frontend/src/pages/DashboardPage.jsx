@@ -3,6 +3,11 @@ import * as XLSX from 'xlsx';
 import PicketSchedulePage from './PicketSchedulePage';
 import AccountSettingsPage from './AccountSettingsPage';
 import TambahSiswaPage from './TambahSiswaPage';
+import AttendanceHistoryPage from './AttendanceHistoryPage';
+import AddPiketStudentPage from './AddPiketStudentPage'; // ← IMPORT BARU
+import UpgradeModal from '../components/UpgradeModal';
+import LogoutConfirmModal from '../components/LogoutConfirmModal';
+import AttendanceDetailModal from '../components/AttendanceDetailModal';
 
 export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpdateUser }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,6 +19,9 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState({ text: '', type: '' });
   const [importStatus, setImportStatus] = useState({ text: '', type: '' });
+  const [showUpgrade, setShowUpgrade] = useState(true);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [detailStudent, setDetailStudent] = useState(null);
 
   useEffect(() => {
     fetchStudents();
@@ -42,6 +50,7 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
       setLoading(false);
     }
   };
+
   const handleStatusChange = (id, newStatus) => {
     setStudents(prev =>
       prev.map(student => (student.id === id ? { ...student, status: newStatus } : student))
@@ -75,6 +84,9 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
       const data = await response.json();
       if (response.ok && data.success) {
         setSaveStatus({ text: 'Rekap absensi hari ini berhasil disimpan!', type: 'success' });
+        setTimeout(() => {
+          setActiveMenu('history');
+        }, 800);
       } else {
         setSaveStatus({ text: 'Tersimpan lokal di sesi saat ini!', type: 'success' });
       }
@@ -106,7 +118,7 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
       throw new Error('Fallback client-side export');
     } catch {
       const worksheetData = students.map((s, idx) => ({
-        'No Absen': s.id || String(idx + 1).padStart(2, '0'),
+        'No Absen': s.noUrut || String(idx + 1).padStart(2, '0'),
         'Nama Siswa': s.full_name || s.name,
         'NIS': s.noAbsen || '-',
         'Mata Pelajaran': selectedSubject,
@@ -120,13 +132,41 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
     }
   };
 
+  const handleSaveProof = async (updated) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/attendance/save-proof', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          student_id: updated.id,
+          status: updated.status,
+          proof_url: updated.proof_url,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setStudents(prev => prev.map(s => (s.id === updated.id ? { ...s, ...updated } : s)));
+        setSaveStatus({ text: 'Bukti kehadiran berhasil disimpan!', type: 'success' });
+      } else {
+        setStudents(prev => prev.map(s => (s.id === updated.id ? { ...s, ...updated } : s)));
+        setSaveStatus({ text: 'Tersimpan lokal di sesi saat ini!', type: 'success' });
+      }
+    } catch {
+      setStudents(prev => prev.map(s => (s.id === updated.id ? { ...s, ...updated } : s)));
+      setSaveStatus({ text: 'Tersimpan lokal di sesi saat ini!', type: 'success' });
+    } finally {
+      setDetailStudent(null);
+      setTimeout(() => setSaveStatus({ text: '', type: '' }), 3500);
+    }
+  };
+
   const filteredStudents = students
+    .filter(s => !currentUser?.id || String(s.id) !== String(currentUser.id))
     .filter(
       s =>
         (s.full_name && s.full_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (s.name && s.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (s.nis && s.nis.toString().includes(searchQuery)) ||
-        (s.noAbsen && s.noAbsen.toString().includes(searchQuery)) ||
         (s.id && s.id.toString().includes(searchQuery))
     );
 
@@ -134,7 +174,26 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
     currentUser?.role_id === 3 ||
     ['guru', 'wali kelas', 'supervisor'].includes((currentUser?.role_name || '').toLowerCase());
 
-  const isEmptyState = !loading && filteredStudents.length === 0;
+  const isEmptyState = !loading && students.length === 0;
+
+  const handleCloseUpgrade = () => {
+    setShowUpgrade(false);
+  };
+
+  // ✅ RENDER HALAMAN KHUSUS "TAMBAH DATA SISWA PIKET"
+  if (activeMenu === 'addPiketStudent') {
+    return (
+      <AddPiketStudentPage
+        currentUser={currentUser}
+        onBack={() => setActiveMenu('settings')}
+        onPiketAssigned={(updatedStudent) => {
+          setStudents(prev => prev.map(s =>
+            s.id === updatedStudent.id ? { ...s, picket_day: updatedStudent.picketDay } : s
+          ));
+        }}
+      />
+    );
+  }
 
   if (activeMenu === 'addStudent') {
     return (
@@ -216,10 +275,7 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
         </div>
 
         <button
-          onClick={() => {
-            if (onLogout) onLogout();
-            else if (onNavigate) onNavigate('login');
-          }}
+          onClick={() => setShowLogoutConfirm(true)}
           className="w-12 h-12 rounded-2xl text-[#082052]/60 hover:text-red-600 hover:bg-red-100 flex items-center justify-center transition cursor-pointer"
           title="Keluar"
         >
@@ -374,8 +430,8 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
                 <div className="bg-[#F8F3ED] text-[#082052] rounded-3xl overflow-hidden shadow-2xl border border-[#E4D8CE]">
                   <div className="grid grid-cols-12 px-6 md:px-8 py-3.5 font-bold text-xs text-gray-700 border-b border-[#D7C7B7]/60">
                     <div className="col-span-2 md:col-span-2 min-w-0">No Absen</div>
-                    <div className="col-span-6 md:col-span-6 min-w-0">Nama Siswa</div>
-                    <div className="col-span-4 md:col-span-4 text-right pr-2 md:pr-6">Keterangan</div>
+                    <div className="col-span-5 md:col-span-5 min-w-0">Nama Siswa</div>
+                    <div className="col-span-5 md:col-span-5 text-right pr-2 md:pr-6">Keterangan</div>
                   </div>
 
                   <div className="divide-y divide-[#D7C7B7]/50">
@@ -388,20 +444,20 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
                             {student.noUrut || String(index + 1).padStart(2, '0')}
                           </div>
 
-                          <div className="col-span-6 md:col-span-6 min-w-0">
+                          <div className="col-span-5 md:col-span-5 min-w-0">
                             <h3 className="font-extrabold text-[#082052] text-sm md:text-base leading-snug truncate">{student.full_name || student.name}</h3>
-                            <p className="text-[11px] md:text-xs text-gray-500 font-medium mt-0.5 break-all">NIS: {student.nis || student.noAbsen || student.employee_code || '-'}</p>
+                            <p className="text-[11px] md:text-xs text-gray-500 font-medium mt-0.5 break-all">NIS: {student.noAbsen || '-'}</p>
                           </div>
 
-                          <div className="col-span-4 md:col-span-4 flex justify-end">
-                            <div className="relative w-40 md:w-52">
+                          <div className="col-span-5 md:col-span-5 flex items-center justify-end gap-2">
+                            <div className="relative w-36 md:w-44">
                               <select
                                 value={student.status || ''}
                                 onChange={(e) => handleStatusChange(student.id, e.target.value)}
-                                className={`w-full appearance-none px-5 py-3 rounded-2xl font-bold text-xs transition cursor-pointer shadow-md focus:outline-none pr-9 text-center ${student.status === 'Hadir' ? 'bg-emerald-600 text-white'
+                                className={`w-full appearance-none px-4 py-3 rounded-2xl font-bold text-xs transition cursor-pointer shadow-md focus:outline-none pr-8 text-center ${student.status === 'Hadir' ? 'bg-emerald-600 text-white'
                                   : student.status === 'Izin' ? 'bg-amber-500 text-white'
                                     : student.status === 'Sakit' ? 'bg-blue-600 text-white'
-                                      : student.status === 'Alpa' ? 'bg-rose-600 text-white'
+                                      : student.status === 'Alpa' || student.status === 'Alpha' ? 'bg-rose-600 text-white'
                                         : 'bg-[#082052] text-white hover:bg-[#0c2e73]'
                                   }`}
                               >
@@ -409,10 +465,21 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
                                 <option value="Hadir" className="bg-[#082052] text-white">Hadir</option>
                                 <option value="Izin" className="bg-[#082052] text-white">Izin</option>
                                 <option value="Sakit" className="bg-[#082052] text-white">Sakit</option>
-                                <option value="Alpa" className="bg-[#082052] text-white">Alpa</option>
+                                <option value="Alpha" className="bg-[#082052] text-white">Alpha</option>
                               </select>
-                              <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white text-xs">▼</span>
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white text-xs">▼</span>
                             </div>
+
+                            <button
+                              type="button"
+                              onClick={() => setDetailStudent(student)}
+                              className="shrink-0 px-3 py-2.5 rounded-xl border border-[#082052]/15 bg-white/90 text-[#082052] text-[11px] font-bold flex items-center gap-1.5 hover:bg-white transition cursor-pointer shadow-sm"
+                            >
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+                              </svg>
+                              Upload Bukti
+                            </button>
                           </div>
                         </div>
                       ))
@@ -462,15 +529,48 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
             onNavigate={onNavigate}
             onUpdateUser={onUpdateUser}
             onOpenAddStudent={(type) => {
-              setAddStudentType(type);
-              setActiveMenu('addStudent');
+              // ✅ JIKA TIPE 'PIKET', ARAHKAN KE HALAMAN BARU ADD_PIKET_STUDENT
+              if (type === 'piket') {
+                setActiveMenu('addPiketStudent');
+              } else {
+                setAddStudentType(type);
+                setActiveMenu('addStudent');
+              }
             }}
             onStudentAdded={(newStudent) => {
               setStudents(prev => [newStudent, ...prev]);
             }}
           />
         )}
+
+        {activeMenu === 'history' && (
+          <AttendanceHistoryPage
+            students={students}
+            onBack={() => setActiveMenu('attendance')}
+          />
+        )}
       </main>
+
+      {showUpgrade && <UpgradeModal onClose={handleCloseUpgrade} />}
+
+      {showLogoutConfirm && (
+        <LogoutConfirmModal
+          onConfirm={() => {
+            setShowLogoutConfirm(false);
+            if (onLogout) onLogout();
+            else if (onNavigate) onNavigate('login');
+          }}
+          onCancel={() => setShowLogoutConfirm(false)}
+        />
+      )}
+
+      {detailStudent && (
+        <AttendanceDetailModal
+          student={detailStudent}
+          onClose={() => setDetailStudent(null)}
+          onSave={handleSaveProof}
+        />
+      )}
     </div>
   );
 }
