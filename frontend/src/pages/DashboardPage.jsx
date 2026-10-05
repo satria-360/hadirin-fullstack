@@ -4,7 +4,7 @@ import PicketSchedulePage from './PicketSchedulePage';
 import AccountSettingsPage from './AccountSettingsPage';
 import TambahSiswaPage from './TambahSiswaPage';
 import AttendanceHistoryPage from './AttendanceHistoryPage';
-import AddPiketStudentPage from './AddPiketStudentPage'; // ← IMPORT BARU
+import AddPiketStudentPage from './AddPiketStudentPage';
 import UpgradeModal from '../components/UpgradeModal';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import AttendanceDetailModal from '../components/AttendanceDetailModal';
@@ -22,6 +22,10 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
   const [showUpgrade, setShowUpgrade] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [detailStudent, setDetailStudent] = useState(null);
+
+  // ✅ STATE BARU UNTUK MODAL RIWAYAT REKAP ABSEN
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [historyDate, setHistoryDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     fetchStudents();
@@ -75,18 +79,13 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({
-          students,
-          subject: selectedSubject
-        })
+        body: JSON.stringify({ students, subject: selectedSubject })
       });
 
       const data = await response.json();
       if (response.ok && data.success) {
         setSaveStatus({ text: 'Rekap absensi hari ini berhasil disimpan!', type: 'success' });
-        setTimeout(() => {
-          setActiveMenu('history');
-        }, 800);
+        setTimeout(() => { setActiveMenu('history'); }, 800);
       } else {
         setSaveStatus({ text: 'Tersimpan lokal di sesi saat ini!', type: 'success' });
       }
@@ -180,7 +179,8 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
     setShowUpgrade(false);
   };
 
-  // ✅ RENDER HALAMAN KHUSUS "TAMBAH DATA SISWA PIKET"
+  const totalHadir = students.filter(s => s.status === 'Hadir').length;
+
   if (activeMenu === 'addPiketStudent') {
     return (
       <AddPiketStudentPage
@@ -372,18 +372,16 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
-                        🔍
-                      </span>
-                      <input
-                        type="text"
-                        placeholder="Cari nama/NIS..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 pr-4 py-2 bg-[#122b68] border border-white/20 rounded-full text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50 w-44 md:w-56"
-                      />
-                    </div>
+                    {/* ✅ TOMBOL RIWAYAT REKAP ABSEN */}
+                    <button
+                      onClick={() => setShowHistoryModal(true)}
+                      className="inline-flex items-center gap-2 px-5 py-2 bg-white/10 border border-white/20 hover:bg-white/20 text-white font-bold text-xs rounded-full shadow-md transition cursor-pointer"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      <span>Riwayat Rekap Absen</span>
+                    </button>
 
                     <button
                       onClick={handleSetHadirSemua}
@@ -487,6 +485,13 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
                       <div className="p-8 text-center text-xs text-gray-500">Siswa tidak ditemukan.</div>
                     )}
                   </div>
+
+                  {!loading && filteredStudents.length > 0 && (
+                    <div className="border-t border-[#D7C7B7]/60 px-6 md:px-8 py-3 flex items-center justify-between bg-[#F1EAE0]">
+                      <span className="text-xs font-bold text-[#082052]">Total Murid Hadir:</span>
+                      <span className="text-sm font-extrabold text-emerald-600">{totalHadir} Murid</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
@@ -497,7 +502,7 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
                     </svg>
-                    <span>Ekspor Rekap Absensi</span>
+                    <span>Ekspor Rekapan Absen</span>
                   </button>
 
                   <button
@@ -529,7 +534,6 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
             onNavigate={onNavigate}
             onUpdateUser={onUpdateUser}
             onOpenAddStudent={(type) => {
-              // ✅ JIKA TIPE 'PIKET', ARAHKAN KE HALAMAN BARU ADD_PIKET_STUDENT
               if (type === 'piket') {
                 setActiveMenu('addPiketStudent');
               } else {
@@ -546,6 +550,7 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
         {activeMenu === 'history' && (
           <AttendanceHistoryPage
             students={students}
+            historyDate={historyDate}
             onBack={() => setActiveMenu('attendance')}
           />
         )}
@@ -570,6 +575,50 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
           onClose={() => setDetailStudent(null)}
           onSave={handleSaveProof}
         />
+      )}
+
+      {/* ✅ MODAL POP-UP: LIHAT RIWAYAT REKAP ABSEN */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 z-[75] flex items-start justify-center pt-20 px-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#F8F3ED] text-[#082052] w-full max-w-md rounded-3xl shadow-2xl p-6 border border-[#E4D8CE] relative">
+            <button
+              onClick={() => setShowHistoryModal(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#082052] text-white flex items-center justify-center hover:bg-[#0c2e73] transition cursor-pointer"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-lg font-extrabold tracking-tight mb-4">
+              Lihat Riwayat Rekap Absen
+            </h3>
+
+            <label className="block text-xs font-bold text-[#082052] mb-1.5">
+              Pilih Waktu Absensi
+            </label>
+            <div className="relative mb-5">
+              <input
+                type="date"
+                value={historyDate}
+                onChange={(e) => setHistoryDate(e.target.value)}
+                max={new Date().toISOString().split('T')[0]}
+                className="w-full px-4 py-3 bg-[#D6A143] text-[#082052] font-bold text-sm rounded-xl focus:outline-none shadow-md border border-[#c4923b] [color-scheme:light]"
+              />
+            </div>
+
+            <button
+              onClick={() => {
+                setShowHistoryModal(false);
+                setActiveMenu('history');
+              }}
+              className="w-full py-3 px-4 rounded-xl border border-[#082052]/20 bg-white hover:bg-gray-50 text-[#082052] text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition cursor-pointer"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+              <span>Lihat Rekap Absen</span>
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

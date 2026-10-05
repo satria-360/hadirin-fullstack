@@ -10,6 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'rahasia_jwt_hadirin_2026';
 
 const app = express();
 app.use(cors());
+// Tingkatkan limit payload untuk mengakomodasi foto base64 yang besar
 app.use(express.json({ limit: '50mb' }));
 
 const db = mysql.createPool({
@@ -26,6 +27,8 @@ const db = mysql.createPool({
   try {
     const connection = await db.getConnection();
     console.log('Berhasil terhubung ke database db_hadirin!');
+    // Pastikan proof_url bertipe LONGTEXT agar muat menyimpan base64 gambar resolusi penuh tanpa terpotong
+    await connection.query('ALTER TABLE picket_reports MODIFY proof_url LONGTEXT');
     connection.release();
   } catch (error) {
     console.error('Gagal terhubung ke database:', error.message);
@@ -252,6 +255,57 @@ app.get('/api/picket/dashboard', async (req, res) => {
   }
 });
 
+// ✅ ENDPOINT RIWAYAT ABSENSI PER TANGGAL
+app.get('/api/attendance/history/:date', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Token tidak ditemukan!' });
+  }
+  const { date } = req.params;
+
+  try {
+    const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+
+    let classId = null;
+    const [tc] = await db.query('SELECT id FROM classes WHERE teacher_id = ? LIMIT 1', [decoded.id]);
+    if (tc.length > 0) {
+      classId = tc[0].id;
+    } else {
+      const [u] = await db.query('SELECT class_id FROM users WHERE id = ? LIMIT 1', [decoded.id]);
+      if (u.length > 0) classId = u[0].class_id;
+    }
+    if (!classId) return res.json([]);
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ success: false, message: 'Format tanggal tidak valid (YYYY-MM-DD)' });
+    }
+
+    // PENTING: Pastikan query mengambil proof_url juga
+    const [rows] = await db.query(`
+      SELECT 
+        u.id, 
+        u.employee_code AS noAbsen,
+        u.full_name, 
+        COALESCE(pr.status, '') AS status, 
+        pr.notes,
+        pr.proof_url
+      FROM users u
+      LEFT JOIN picket_reports pr ON u.id = pr.user_id AND pr.picket_date = ?
+      WHERE u.class_id = ? AND u.role_id = 4 AND u.is_student_entry = 1
+      ORDER BY u.id ASC
+    `, [date, classId]);
+
+    const formattedRows = rows.map((r, index) => ({
+      ...r,
+      noUrut: String(index + 1).padStart(2, '0')
+    }));
+
+    res.json(formattedRows);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 app.post('/api/students/create', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -320,7 +374,6 @@ app.post('/api/students/create', async (req, res) => {
   }
 });
 
-// ✅ ENDPOINT BARU: UPDATE PIKET DAY SISWA
 app.put('/api/students/:id/update-piket-day', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -385,33 +438,43 @@ app.post('/api/picket/upload', async (req, res) => {
   }
 });
 
+// ✅ PERBAIKAN UTAMA DI SINI: SAVE PROOF
 app.post('/api/attendance/save-proof', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ success: false, message: 'Token tidak ditemukan!' });
   }
   const { student_id, status, proof_url } = req.body;
+
   if (!student_id) {
     return res.status(400).json({ success: false, message: 'ID siswa wajib diisi!' });
   }
+
   try {
+    // Cek apakah sudah ada record absensi HARI INI untuk siswa ini
     const [existing] = await db.query(
       'SELECT id FROM picket_reports WHERE user_id = ? AND picket_date = CURDATE()',
       [student_id]
     );
+
     if (existing.length > 0) {
+      // UPDATE: Isi proof_url dan status jika diberikan
+      // Gunakan COALESCE agar jika status/proof_url null, nilai lama tidak tertimpa jadi null kecuali sengaja di-set null
       await db.query(
-        'UPDATE picket_reports SET status = COALESCE(?, status), proof_url = ? WHERE id = ?',
+        'UPDATE picket_reports SET status = COALESCE(?, status), proof_url = COALESCE(?, proof_url) WHERE id = ?',
         [status || null, proof_url || null, existing[0].id]
       );
     } else {
+      // INSERT: Buat record baru jika belum ada (misal user upload bukti sebelum set status di main table)
       await db.query(
         'INSERT INTO picket_reports (user_id, picket_date, area_name, status, notes, proof_url) VALUES (?, CURDATE(), ?, ?, ?, ?)',
         [student_id, 'Presensi Kelas', status || '', 'Bukti Ketidakhadiran', proof_url || null]
       );
     }
+
     res.json({ success: true, message: 'Bukti kehadiran berhasil disimpan!' });
   } catch (error) {
+    console.error('Error saving proof:', error);
     res.status(500).json({ success: false, message: 'Gagal menyimpan bukti: ' + error.message });
   }
 });
@@ -470,6 +533,7 @@ app.get('/api/attendance/export/excel', async (req, res) => {
   }
 });
 
+// ✅ PERBAIKAN SAVE ALL AGAR TIDAK MENGHAPUS PROOF_URL YANG SUDAH ADA
 app.post('/api/attendance/save-all', async (req, res) => {
   const { students, subject } = req.body;
   if (!Array.isArray(students)) {
@@ -477,26 +541,33 @@ app.post('/api/attendance/save-all', async (req, res) => {
   }
   try {
     for (const student of students) {
-      if (student.status) {
-        const [existing] = await db.query(
-          'SELECT id FROM picket_reports WHERE user_id = ? AND picket_date = CURDATE()',
-          [student.id]
+      if (!student.id) continue;
+
+      const currentStatus = student.status || '';
+
+      const [existing] = await db.query(
+        'SELECT id, proof_url FROM picket_reports WHERE user_id = ? AND picket_date = CURDATE()',
+        [student.id]
+      );
+
+      if (existing.length > 0) {
+        // Update status saja, jangan sentuh proof_url jika sudah ada isinya (kecuali dikirim explicit null dari FE, tapi biasanya FE kirim string panjang)
+        // Di sini kita asumsikan save-all hanya mengubah STATUS KEHADIRAN.
+        // Jika user ingin ganti bukti, mereka pakai tombol Upload Bukti terpisah.
+        await db.query(
+          'UPDATE picket_reports SET status = ?, area_name = ? WHERE id = ?',
+          [currentStatus || 'Belum Absen', subject || 'Presensi Kelas', existing[0].id]
         );
-        if (existing.length > 0) {
-          await db.query(
-            'UPDATE picket_reports SET status = ?, area_name = ? WHERE id = ?',
-            [student.status, subject || 'Presensi Kelas', existing[0].id]
-          );
-        } else {
-          await db.query(
-            'INSERT INTO picket_reports (user_id, picket_date, area_name, status, notes) VALUES (?, CURDATE(), ?, ?, ?)',
-            [student.id, subject || 'Presensi Kelas', student.status, 'Presensi Wali Kelas']
-          );
-        }
+      } else {
+        await db.query(
+          'INSERT INTO picket_reports (user_id, picket_date, area_name, status, notes) VALUES (?, CURDATE(), ?, ?, ?)',
+          [student.id, subject || 'Presensi Kelas', currentStatus || 'Belum Absen', 'Presensi Wali Kelas']
+        );
       }
     }
     res.json({ success: true, message: 'Seluruh rekap absensi hari ini berhasil disimpan!' });
   } catch (error) {
+    console.error('Error save-all:', error);
     res.status(500).json({ success: false, message: 'Gagal menyimpan rekap: ' + error.message });
   }
 });
