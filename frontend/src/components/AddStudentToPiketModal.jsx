@@ -40,7 +40,7 @@ export default function AddStudentToPiketModal({ student, onClose, onConfirm }) 
 
                     {/* Judul & Subjudul */}
                     <h3 className="text-[21px] font-black tracking-tight text-gray-950 mb-2 leading-snug">
-                        Data Siswa Berhasil Ditambahkan!
+                        Data Siswa Berhasil Dipindahkan!
                     </h3>
                     <p className="text-[13px] text-gray-500 font-medium leading-relaxed mb-6 px-1">
                         Silahkan kembali ke pengaturan jika ada data yang salah

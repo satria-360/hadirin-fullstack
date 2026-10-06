@@ -15,20 +15,27 @@ export default function AttendanceDetailModal({ student, onClose, onSave }) {
     const [saving, setSaving] = useState(false);
     const fileRef = useRef(null);
 
-    const needsProof = ['Izin', 'Sakit', 'Alpha'].includes(status);
+    const needsProof = ['Izin', 'Sakit'].includes(status);
+    const isNoProofStatus = ['Hadir', 'Alpha', 'Alpa'].includes(status);
 
     const handleFile = (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onloadend = () => setProofUrl(reader.result);
+        reader.onloadend = () => {
+            const result = reader.result;
+            setProofUrl(result);
+            if (isNoProofStatus) {
+                onSave({ ...student, status, proof_url: result });
+            }
+        };
         reader.readAsDataURL(file);
     };
 
     const handleSave = async () => {
         setSaving(true);
         try {
-            await onSave({ ...student, status, proof_url: needsProof ? proofUrl : '' });
+            await onSave({ ...student, status, proof_url: needsProof ? proofUrl : (proofUrl || '') });
         } finally {
             setSaving(false);
         }
@@ -71,7 +78,7 @@ export default function AttendanceDetailModal({ student, onClose, onSave }) {
 
                         <div className="flex items-center gap-3 pt-1">
                             <span className="text-sm font-semibold">Status Kehadiran:</span>
-                            {needsProof || status ? (
+                            {needsProof || isNoProofStatus || status ? (
                                 <span className={`px-3.5 py-1 rounded-full text-xs font-bold ${STATUS_STYLE[status] || 'bg-gray-300 text-gray-700'}`}>
                                     {status || '—'}
                                 </span>
@@ -90,7 +97,8 @@ export default function AttendanceDetailModal({ student, onClose, onSave }) {
                             )}
                         </div>
 
-                        {status === 'Hadir' && (
+                        {/* Hadir dan Alpha disamakan: tidak ada upload bukti keterangan langsung */}
+                        {isNoProofStatus && (
                             <div className="pt-2 space-y-2.5">
                                 <button
                                     type="button"
@@ -107,6 +115,7 @@ export default function AttendanceDetailModal({ student, onClose, onSave }) {
                                 >
                                     <Edit3 className="w-4 h-4" /> Edit Keterangan
                                 </button>
+                                <input ref={fileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleFile} />
                             </div>
                         )}
 

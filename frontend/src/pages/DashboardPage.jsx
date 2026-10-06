@@ -8,11 +8,48 @@ import AddPiketStudentPage from './AddPiketStudentPage';
 import UpgradeModal from '../components/UpgradeModal';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import AttendanceDetailModal from '../components/AttendanceDetailModal';
+import hadirinLogo from '../assets/hadirin-logo.png';
 
 export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpdateUser }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('Bahasa Indonesia (07:00 - 9:00)');
-  const [activeMenu, setActiveMenu] = useState('attendance');
+  const [activeMenu, setActiveMenuState] = useState(() => {
+    try {
+      if (window.history.state?.menu) return window.history.state.menu;
+      return localStorage.getItem('dashboardActiveMenu') || 'attendance';
+    } catch {
+      return 'attendance';
+    }
+  });
+
+  const setActiveMenu = (menu, addToHistory = true) => {
+    setActiveMenuState(menu);
+    try {
+      localStorage.setItem('dashboardActiveMenu', menu);
+      if (addToHistory && window.history.state?.menu !== menu) {
+        window.history.pushState({ tab: 'dashboard', menu }, '', window.location.pathname);
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    // Pastikan state dashboard tersimpan di history
+    if (!window.history.state?.menu) {
+      window.history.replaceState({ tab: 'dashboard', menu: activeMenu }, '', window.location.pathname);
+    }
+
+    const handleDashboardPopState = (event) => {
+      if (event.state && event.state.tab === 'dashboard' && event.state.menu) {
+        setActiveMenuState(event.state.menu);
+        try {
+          localStorage.setItem('dashboardActiveMenu', event.state.menu);
+        } catch {}
+      }
+    };
+
+    window.addEventListener('popstate', handleDashboardPopState);
+    return () => window.removeEventListener('popstate', handleDashboardPopState);
+  }, []);
   const [addStudentType, setAddStudentType] = useState('absensi');
   const [classCode, setClassCode] = useState(currentUser?.class_code || 'GAJBHG');
   const [students, setStudents] = useState([]);
@@ -43,7 +80,11 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
       });
       if (response.ok) {
         const data = await response.json();
-        setStudents(Array.isArray(data) ? data : []);
+        const mappedData = (Array.isArray(data) ? data : []).map(student => ({
+          ...student,
+          status: student.status || ''
+        }));
+        setStudents(mappedData);
       } else {
         setStudents([]);
       }
@@ -160,13 +201,19 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
     }
   };
 
-  const filteredStudents = students
+  const filteredStudents = [...students]
     .filter(s => !currentUser?.id || String(s.id) !== String(currentUser.id))
+    .sort((a, b) => (a.full_name || a.name || '').localeCompare(b.full_name || b.name || '', 'id', { sensitivity: 'base' }))
+    .map((s, idx) => ({
+      ...s,
+      noUrut: String(idx + 1).padStart(2, '0')
+    }))
     .filter(
       s =>
         (s.full_name && s.full_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (s.name && s.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (s.id && s.id.toString().includes(searchQuery))
+        (s.id && s.id.toString().includes(searchQuery)) ||
+        (s.noAbsen && s.noAbsen.toString().includes(searchQuery))
     );
 
   const isTeacher =
@@ -223,12 +270,10 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
         <div className="flex flex-col items-center w-full">
           <div
             onClick={() => onNavigate && onNavigate('landing')}
-            className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center border-2 border-blue-400 shadow-md cursor-pointer hover:scale-105 transition"
+            className="w-12 h-12 rounded-full bg-white flex items-center justify-center border-2 border-[#D7C7B7] shadow-md cursor-pointer hover:scale-105 transition overflow-hidden p-1"
             title="Kembali ke Beranda"
           >
-            <svg className="w-7 h-7 text-[#0055b8]" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2L1 7l11 5 9-4.09V17h2V7L12 2zm0 13c-3.31 0-6-1.34-6-3v4c0 1.66 2.69 3 6 3s6-1.34 6-3v-4c0 1.66-2.69 3-6 3z" />
-            </svg>
+            <img src={hadirinLogo} alt="Hadirin.co" className="w-full h-full object-contain" />
           </div>
         </div>
 
@@ -556,7 +601,18 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
         )}
       </main>
 
-      {showUpgrade && <UpgradeModal onClose={handleCloseUpgrade} />}
+      {showUpgrade && (
+        <UpgradeModal
+          onClose={handleCloseUpgrade}
+          onSelectPlan={() => {
+            handleCloseUpgrade();
+            if (onNavigate) {
+              sessionStorage.setItem('pricingSource', 'upgradeModal');
+              onNavigate('pricing');
+            }
+          }}
+        />
+      )}
 
       {showLogoutConfirm && (
         <LogoutConfirmModal

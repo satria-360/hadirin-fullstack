@@ -191,17 +191,7 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
       {/* Kartu Utama Berwarna Krem Lembut Persis Screenshot */}
       <div className="bg-[#F8F3ED] text-[#1E293B] rounded-3xl p-6 md:p-10 shadow-2xl relative max-w-4xl mx-auto border border-[#E9DFD5]">
 
-        {/* Menu titik tiga & icon search/zoom kecil di kanan atas */}
-        <div className="absolute top-6 right-8 flex flex-col items-end gap-2 text-gray-400">
-          <button className="text-gray-400 hover:text-gray-700 tracking-widest text-lg font-bold">
-            •••
-          </button>
-          <button className="text-gray-400 hover:text-gray-600">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </button>
-        </div>
+
 
         {/* 1. SECTION AVATAR & NAMA */}
         <div className="flex flex-col items-center justify-center text-center mt-2 mb-6">
@@ -448,11 +438,16 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
                 </span>
               </button>
               <div>
-                <div className="text-xs font-bold text-[#111827] leading-tight">
-                  Notifikasi
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-[#111827] leading-tight">
+                    Notifikasi
+                  </span>
+                  <span className="text-[10px] font-semibold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                    *Wajib Dinyalakan
+                  </span>
                 </div>
                 <div className="text-[11px] text-gray-500 mt-0.5">
-                  Pemberitahuan akan dikirim melalui email kamu.
+                  Pemberitahuan akan dikirim melalui email kamu. (Wajib dinyalakan untuk menerima pembaruan akun & absensi)
                 </div>
               </div>
             </div>

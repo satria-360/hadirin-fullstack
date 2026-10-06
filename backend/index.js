@@ -27,8 +27,9 @@ const db = mysql.createPool({
   try {
     const connection = await db.getConnection();
     console.log('Berhasil terhubung ke database db_hadirin!');
-    // Pastikan proof_url bertipe LONGTEXT agar muat menyimpan base64 gambar resolusi penuh tanpa terpotong
+    // Pastikan proof_url & photo_url bertipe LONGTEXT agar muat menyimpan base64 gambar resolusi penuh tanpa terpotong
     await connection.query('ALTER TABLE picket_reports MODIFY proof_url LONGTEXT');
+    await connection.query('ALTER TABLE picket_photos MODIFY photo_url LONGTEXT');
     connection.release();
   } catch (error) {
     console.error('Gagal terhubung ke database:', error.message);
@@ -100,6 +101,20 @@ app.post('/api/auth/login', async (req, res) => {
     if (user.role_id === 3 && !classPayload.class_id) {
       const created = await createUniqueClassCode(db, 'Kelas ' + (user.full_name || ''), user.id);
       classPayload = { class_id: created.id, class_name: created.name, class_code: created.code };
+    }
+
+    // ✅ Reset status kehadiran siswa saat user login sehingga dashboard kembali bersih (status kosong)
+    try {
+      if (classPayload.class_id) {
+        await db.query(`
+          UPDATE picket_reports pr
+          JOIN users u ON pr.user_id = u.id
+          SET pr.status = ''
+          WHERE u.class_id = ? AND pr.picket_date = CURDATE()
+        `, [classPayload.class_id]);
+      }
+    } catch (resetErr) {
+      console.warn('Gagal mereset status absensi saat login:', resetErr.message);
     }
     const token = jwt.sign(
       { id: user.id, email: user.email, full_name: user.full_name, role_id: user.role_id, role_name: user.role_name },
@@ -243,7 +258,7 @@ app.get('/api/picket/dashboard', async (req, res) => {
       LEFT JOIN picket_reports pr ON u.id = pr.user_id AND pr.picket_date = CURDATE()
       LEFT JOIN picket_photos pp ON pr.id = pp.picket_report_id
       WHERE u.class_id = ? AND u.role_id = 4 AND u.is_student_entry = 1
-      ORDER BY u.id ASC
+      ORDER BY u.full_name ASC, u.id ASC
     `, [classId]);
     const formattedRows = rows.map((r, index) => ({
       ...r,
@@ -292,7 +307,7 @@ app.get('/api/attendance/history/:date', async (req, res) => {
       FROM users u
       LEFT JOIN picket_reports pr ON u.id = pr.user_id AND pr.picket_date = ?
       WHERE u.class_id = ? AND u.role_id = 4 AND u.is_student_entry = 1
-      ORDER BY u.id ASC
+      ORDER BY u.full_name ASC, u.id ASC
     `, [date, classId]);
 
     const formattedRows = rows.map((r, index) => ({
@@ -405,8 +420,97 @@ app.put('/api/students/:id/update-piket-day', async (req, res) => {
   }
 });
 
+// ✅ ENDPOINT DAFTAR RIWAYAT LAPORAN PIKET (Bisa dilihat oleh Wali Kelas & Siswa)
+app.get('/api/picket/reports', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Token tidak ditemukan!' });
+  }
+
+  try {
+    const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+
+    let classId = null;
+    const [tc] = await db.query('SELECT id FROM classes WHERE teacher_id = ? LIMIT 1', [decoded.id]);
+    if (tc.length > 0) {
+      classId = tc[0].id;
+    } else {
+      const [u] = await db.query('SELECT class_id FROM users WHERE id = ? LIMIT 1', [decoded.id]);
+      if (u.length > 0) classId = u[0].class_id;
+    }
+
+    let query = `
+      SELECT 
+        pr.id,
+        pr.user_id,
+        pr.picket_date,
+        pr.area_name,
+        pr.status,
+        pr.notes,
+        pr.proof_url,
+        pr.created_at,
+        u.full_name AS student_name,
+        u.employee_code AS nis
+      FROM picket_reports pr
+      JOIN users u ON pr.user_id = u.id
+    `;
+    const params = [];
+
+    if (classId) {
+      query += ' WHERE u.class_id = ? ';
+      params.push(classId);
+    }
+
+    query += ' ORDER BY pr.id DESC, pr.picket_date DESC LIMIT 50 ';
+
+    const [reports] = await db.query(query, params);
+
+    // Ambil foto-foto pendukung dari picket_photos untuk tiap report
+    const formatted = await Promise.all(
+      reports.map(async (r) => {
+        const [photos] = await db.query(
+          'SELECT photo_url FROM picket_photos WHERE picket_report_id = ? ORDER BY id ASC LIMIT 2',
+          [r.id]
+        );
+
+        const photoOne = photos[0]?.photo_url || r.proof_url || '';
+        const photoTwo = photos[1]?.photo_url || '';
+
+        const dateObj = new Date(r.picket_date || r.created_at);
+        const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        const dayDate = `${days[dateObj.getDay()]}, ${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+
+        const createdDate = new Date(r.created_at || dateObj);
+        const time = `${String(createdDate.getHours()).padStart(2, '0')}:${String(createdDate.getMinutes()).padStart(2, '0')}:${String(createdDate.getSeconds()).padStart(2, '0')} WIB`;
+
+        return {
+          id: r.id,
+          name: r.student_name,
+          nis: r.nis,
+          dayDate,
+          time,
+          statusBadge: r.status === 'completed' || r.status === 'Hadir' ? 'Terkonfirmasi' : 'Dalam Proses',
+          roleBadge: 'Piket',
+          notes: r.notes || r.area_name || 'Laporan piket harian kelas selesai dikerjakan.',
+          photoOne,
+          photoTwo
+        };
+      })
+    );
+
+    res.json({ success: true, reports: formatted });
+  } catch (error) {
+    console.error('Gagal mengambil riwayat laporan piket:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 app.post('/api/picket/upload', async (req, res) => {
-  const { student_id, status, area_name, notes, photo_url } = req.body;
+  const { student_id, status, area_name, notes, photo_url, photo_one, photo_two } = req.body;
+  const primaryPhoto = photo_one || photo_url || '';
+  const secondaryPhoto = photo_two || '';
+
   try {
     const [existing] = await db.query(
       'SELECT id FROM picket_reports WHERE user_id = ? AND picket_date = CURDATE()',
@@ -416,25 +520,35 @@ app.post('/api/picket/upload', async (req, res) => {
     if (existing.length > 0) {
       reportId = existing[0].id;
       await db.query(
-        'UPDATE picket_reports SET status = ?, area_name = ?, notes = ? WHERE id = ?',
-        [status || 'completed', area_name || 'Area Piket Kelas', notes || '', reportId]
+        'UPDATE picket_reports SET status = ?, area_name = ?, notes = ?, proof_url = COALESCE(?, proof_url) WHERE id = ?',
+        [status || 'completed', area_name || 'Area Piket Kelas', notes || '', primaryPhoto || null, reportId]
       );
     } else {
       const [insertResult] = await db.query(
-        'INSERT INTO picket_reports (user_id, picket_date, area_name, status, notes) VALUES (?, CURDATE(), ?, ?, ?)',
-        [student_id, area_name || 'Area Piket Kelas', status || 'completed', notes || '']
+        'INSERT INTO picket_reports (user_id, picket_date, area_name, status, notes, proof_url) VALUES (?, CURDATE(), ?, ?, ?, ?)',
+        [student_id, area_name || 'Area Piket Kelas', status || 'completed', notes || '', primaryPhoto || null]
       );
       reportId = insertResult.insertId;
     }
-    if (photo_url) {
+
+    // Bersihkan atau simpan foto ke picket_photos
+    if (primaryPhoto) {
       await db.query(
         'INSERT INTO picket_photos (picket_report_id, photo_url, caption) VALUES (?, ?, ?)',
-        [reportId, photo_url, 'Bukti Piket']
+        [reportId, primaryPhoto, 'Gambar Satu']
       );
     }
-    res.json({ message: 'Data piket berhasil diperbarui!' });
+    if (secondaryPhoto) {
+      await db.query(
+        'INSERT INTO picket_photos (picket_report_id, photo_url, caption) VALUES (?, ?, ?)',
+        [reportId, secondaryPhoto, 'Gambar Dua']
+      );
+    }
+
+    res.json({ success: true, message: 'Laporan piket berhasil dikirim!' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error picket upload:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

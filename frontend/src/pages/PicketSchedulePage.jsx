@@ -3,6 +3,11 @@ import { Camera, CheckCircle2, History, X, Clock, Calendar, Eye, Plus, RefreshCw
 import AddStudentToPiketModal from '../components/AddStudentToPiketModal';
 
 export default function PicketSchedulePage({ currentUser, onNavigate, onStudentAdded }) {
+  const isTeacher =
+    currentUser?.role_id === 3 ||
+    ['guru', 'wali kelas', 'supervisor'].includes((currentUser?.role_name || '').toLowerCase());
+  const isStudent = !isTeacher;
+
   const [activeTab, setActiveTab] = useState('jadwal');
   const [selectedDay, setSelectedDay] = useState('Senin');
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -31,7 +36,35 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
 
   useEffect(() => {
     fetchClassStudents();
+    fetchPicketReports();
   }, []);
+
+  // ✅ Auto refresh riwayat laporan piket saat berpindah ke tab riwayat
+  useEffect(() => {
+    if (activeTab === 'riwayat') {
+      fetchPicketReports();
+    }
+  }, [activeTab]);
+
+  const fetchPicketReports = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5000/api/picket/reports', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      if (data.success && Array.isArray(data.reports)) {
+        setReports(data.reports);
+      }
+    } catch (err) {
+      console.error("Gagal mengambil data riwayat laporan piket:", err);
+    }
+  };
 
   const fetchClassStudents = async () => {
     try {
@@ -217,7 +250,7 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
     setSubmitMessage({ text: 'Mengirim laporan piket...', type: 'info' });
     try {
       const token = localStorage.getItem('token');
-      await fetch('http://localhost:5000/api/picket/upload', {
+      const response = await fetch('http://localhost:5000/api/picket/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -225,25 +258,22 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
           status: 'completed',
           area_name: 'Piket Harian Kelas',
           notes: catatan,
-          photo_url: fotoSatu || fotoDua || ''
+          photo_url: fotoSatu || fotoDua || '',
+          photo_one: fotoSatu || '',
+          photo_two: fotoDua || ''
         })
       });
-      const newReportItem = {
-        id: Date.now(),
-        name: namaSiswa,
-        dayDate: formatDateIndonesia(new Date(tanggalPiket)),
-        time: `${formatClock(new Date())} WIB`,
-        statusBadge: 'Terkonfirmasi',
-        roleBadge: 'Piket',
-        notes: catatan || 'Piket harian kelas selesai dikerjakan.',
-        photoOne: fotoSatu || '',
-        photoTwo: fotoDua || ''
-      };
-      setReports([newReportItem, ...reports]);
+      
+      await fetchPicketReports();
+
       setSubmitMessage({ text: 'Laporan piket berhasil dikirim!', type: 'success' });
       setCatatan('');
       setFotoSatu(null);
       setFotoDua(null);
+      // Pindahkan langsung ke tab riwayat agar murid/user langsung melihat laporan yang baru dikirim
+      setTimeout(() => {
+        setActiveTab('riwayat');
+      }, 700);
     } catch {
       setSubmitMessage({ text: 'Laporan tersimpan di sesi lokal!', type: 'success' });
     } finally {
@@ -293,13 +323,28 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
       </div>
 
       <div className="bg-white rounded-2xl p-1.5 shadow-lg mb-6 flex flex-col sm:flex-row items-center justify-between gap-1.5 border border-white/40 w-full">
-        <button onClick={() => setActiveTab('jadwal')} className={`w-full sm:w-1/3 py-2.5 px-4 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition cursor-pointer ${activeTab === 'jadwal' ? 'bg-[#D6A143] text-[#082052] shadow-md' : 'text-gray-500 hover:text-[#082052] hover:bg-gray-100'}`}>
+        <button 
+          onClick={() => setActiveTab('jadwal')} 
+          className={`w-full ${isStudent ? 'sm:w-1/3' : 'sm:w-1/2'} py-2.5 px-4 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition cursor-pointer ${activeTab === 'jadwal' ? 'bg-[#D6A143] text-[#082052] shadow-md' : 'text-gray-500 hover:text-[#082052] hover:bg-gray-100'}`}
+        >
           <Calendar className="w-4 h-4" /><span>Jadwal Piket</span>
         </button>
-        <button onClick={() => setActiveTab('kirim')} className={`w-full sm:w-1/3 py-2.5 px-4 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition cursor-pointer ${activeTab === 'kirim' ? 'bg-[#D6A143] text-[#082052] shadow-md' : 'text-gray-500 hover:text-[#082052] hover:bg-gray-100'}`}>
-          <Camera className="w-4 h-4" /><span>Kirim Laporan Piket</span>
-        </button>
-        <button onClick={() => setActiveTab('riwayat')} className={`w-full sm:w-1/3 py-2.5 px-4 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition cursor-pointer ${activeTab === 'riwayat' ? 'bg-[#D6A143] text-[#082052] shadow-md' : 'text-gray-500 hover:text-[#082052] hover:bg-gray-100'}`}>
+
+        {/* ✅ Tab Kirim Laporan Piket HANYA muncul untuk akun siswa (bukan wali kelas / guru) */}
+        {isStudent && (
+          <button 
+            onClick={() => setActiveTab('kirim')} 
+            className="w-full sm:w-1/3 py-2.5 px-4 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition cursor-pointer bg-[#D6A143] text-[#082052] shadow-md"
+            style={{ backgroundColor: activeTab === 'kirim' ? '#D6A143' : 'transparent', color: activeTab === 'kirim' ? '#082052' : '#6b7280' }}
+          >
+            <Camera className="w-4 h-4" /><span>Kirim Laporan Piket</span>
+          </button>
+        )}
+
+        <button 
+          onClick={() => setActiveTab('riwayat')} 
+          className={`w-full ${isStudent ? 'sm:w-1/3' : 'sm:w-1/2'} py-2.5 px-4 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition cursor-pointer ${activeTab === 'riwayat' ? 'bg-[#D6A143] text-[#082052] shadow-md' : 'text-gray-500 hover:text-[#082052] hover:bg-gray-100'}`}
+        >
           <History className="w-4 h-4" /><span>Riwayat Laporan Piket</span>
         </button>
       </div>
@@ -365,7 +410,7 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
         </div>
       )}
 
-      {activeTab === 'kirim' && (
+      {activeTab === 'kirim' && isStudent && (
         <div className="w-full">
           <div className="bg-[#D6A143] text-[#082052] rounded-3xl p-6 md:p-8 shadow-2xl relative">
             <h2 className="text-xl md:text-2xl font-extrabold tracking-tight mb-0.5">Form Piket Kelas</h2>
@@ -477,12 +522,31 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
       {activeTab === 'riwayat' && (
         <div className="w-full space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
-            <div><h2 className="text-xl md:text-2xl font-extrabold tracking-tight">Riwayat Laporan Piket</h2><p className="text-xs text-gray-300">Wali Kelas & Siswa</p></div>
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#0c2761] border border-white/20 rounded-full text-xs text-gray-300 shadow-md"><Calendar className="w-3.5 h-3.5 text-[#D6A143]" /><span>Semua Riwayat Piket</span></div>
+            <div>
+              <h2 className="text-xl md:text-2xl font-extrabold tracking-tight">Riwayat Laporan Piket</h2>
+              <p className="text-xs text-gray-300">Wali Kelas & Siswa</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={fetchPicketReports}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#0c2761] hover:bg-[#133785] border border-white/20 rounded-full text-xs text-white shadow-md transition cursor-pointer"
+                title="Muat Ulang Riwayat"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-[#D6A143]" />
+                <span>Refresh</span>
+              </button>
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#0c2761] border border-white/20 rounded-full text-xs text-gray-300 shadow-md">
+                <Calendar className="w-3.5 h-3.5 text-[#D6A143]" />
+                <span>Semua Riwayat Piket</span>
+              </div>
+            </div>
           </div>
           <div className="space-y-4">
             {reports.length === 0 ? (
-              <div className="bg-white/5 border border-white/15 rounded-2xl p-8 text-center text-xs text-gray-300">Belum ada riwayat laporan piket yang dikirim.</div>
+              <div className="bg-white/5 border border-white/15 rounded-2xl p-8 text-center text-xs text-gray-300">
+                Belum ada riwayat laporan piket yang dikirim.
+              </div>
             ) : (
               reports.map((item) => (
                 <div key={item.id} className="bg-[#F8F3ED] text-[#082052] rounded-3xl p-5 md:p-6 shadow-xl border border-[#E4D8CE]">

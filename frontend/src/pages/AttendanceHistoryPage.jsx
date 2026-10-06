@@ -2,8 +2,12 @@ import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { ArrowLeft, Eye, Download, X } from 'lucide-react';
 
-function PieChartWithLabels({ data }) {
-    const total = Object.values(data).reduce((a, b) => a + b, 0);
+function PieChartWithLabels({ data, totalStudents = 0 }) {
+    const validStatuses = ['Hadir', 'Izin', 'Sakit', 'Alpha', 'Alpa'];
+    const validData = Object.fromEntries(
+        Object.entries(data || {}).filter(([key, count]) => validStatuses.includes(key) && count > 0)
+    );
+    const totalAbsen = Object.values(validData).reduce((a, b) => a + b, 0);
 
     const colors = {
         Hadir: '#22c55e',
@@ -13,15 +17,51 @@ function PieChartWithLabels({ data }) {
         Alpa: '#ef4444',
     };
 
-    if (total === 0) return null;
+    // Jika tidak ada murid yang diabsen atau tanggal tersebut libur/kosong
+    if (totalAbsen === 0) {
+        return (
+            <div className="relative w-44 h-44 md:w-52 md:h-52">
+                <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-xl">
+                    <circle cx="50" cy="50" r="48" fill="#9ca3af" stroke="#ffffff" strokeWidth="1" />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
+                    <span className="text-base md:text-lg font-extrabold text-white drop-shadow-md leading-tight">
+                        Libur / Kosong
+                    </span>
+                    <span className="text-xs md:text-sm font-bold text-white/90 drop-shadow-md mt-0.5">
+                        Tidak Ada Absen
+                    </span>
+                </div>
+            </div>
+        );
+    }
+
+    const activeEntries = Object.entries(validData);
+
+    // Jika semua siswa memiliki 1 status yang sama (misalnya 100% Hadir)
+    if (activeEntries.length === 1) {
+        const [singleLabel, singleCount] = activeEntries[0];
+        const circleColor = colors[singleLabel] || '#22c55e';
+
+        return (
+            <div className="relative w-44 h-44 md:w-52 md:h-52">
+                <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-xl">
+                    <circle cx="50" cy="50" r="48" fill={circleColor} stroke="#ffffff" strokeWidth="1" />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                    <span className="text-base md:text-lg font-extrabold text-white drop-shadow-md leading-tight">{singleLabel}</span>
+                    <span className="text-xs md:text-sm font-bold text-white drop-shadow-md mt-0.5">{singleCount} Murid</span>
+                </div>
+            </div>
+        );
+    }
 
     let cumulativeAngle = -90;
     const slices = [];
     const labels = [];
 
-    Object.entries(data).forEach(([label, count]) => {
-        if (count === 0) return;
-        const angle = (count / total) * 360;
+    activeEntries.forEach(([label, count]) => {
+        const angle = (count / totalAbsen) * 360;
         const endAngle = cumulativeAngle + angle;
 
         const x1 = 50 + 50 * Math.cos((cumulativeAngle * Math.PI) / 180);
@@ -49,10 +89,10 @@ function PieChartWithLabels({ data }) {
 
         labels.push(
             <g key={`lbl-${label}`}>
-                <text x={lx} y={ly - 1.5} textAnchor="middle" fontSize="4.5" fontWeight="bold" fill="#fff">
+                <text x={lx} y={ly - 1} textAnchor="middle" fontSize="4.5" fontWeight="bold" fill="#fff">
                     {label}
                 </text>
-                <text x={lx} y={ly + 3} textAnchor="middle" fontSize="4" fontWeight="bold" fill="#fff">
+                <text x={lx} y={ly + 3.5} textAnchor="middle" fontSize="3.8" fontWeight="bold" fill="#fff">
                     {count}
                 </text>
             </g>
@@ -61,18 +101,12 @@ function PieChartWithLabels({ data }) {
         cumulativeAngle = endAngle;
     });
 
-    const hadirCount = data.Hadir || 0;
-
     return (
         <div className="relative w-44 h-44 md:w-52 md:h-52">
             <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-xl">
                 {slices}
                 {labels}
             </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-base font-extrabold text-white drop-shadow-md leading-none">Hadir</span>
-                <span className="text-xs font-bold text-white drop-shadow-md mt-0.5">{hadirCount} Murid</span>
-            </div>
         </div>
     );
 }
@@ -128,11 +162,17 @@ export default function AttendanceHistoryPage({ students: initialStudents, histo
         return acc;
     }, {});
 
-    const filteredStudents = students.filter(s =>
-        (s.full_name && s.full_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (s.noAbsen && String(s.noAbsen).includes(searchQuery)) ||
-        (s.id && String(s.id).includes(searchQuery))
-    );
+    const filteredStudents = [...students]
+        .sort((a, b) => (a.full_name || a.name || '').localeCompare(b.full_name || b.name || '', 'id', { sensitivity: 'base' }))
+        .map((s, idx) => ({
+            ...s,
+            noUrut: String(idx + 1).padStart(2, '0')
+        }))
+        .filter(s =>
+            (s.full_name && s.full_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (s.noAbsen && String(s.noAbsen).includes(searchQuery)) ||
+            (s.id && String(s.id).includes(searchQuery))
+        );
 
     const getStatusColor = (status) => {
         switch (status) {

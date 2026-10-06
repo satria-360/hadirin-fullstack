@@ -75,11 +75,17 @@ export default function AddPiketStudentPage({ currentUser, onBack, onPiketAssign
         }
     };
 
-    const filteredStudents = students.filter(s =>
-        (s.full_name && s.full_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (s.noAbsen && String(s.noAbsen).includes(searchQuery)) ||
-        (s.id && String(s.id).includes(searchQuery))
-    );
+    const filteredStudents = [...students]
+        .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '', 'id', { sensitivity: 'base' }))
+        .map((s, idx) => ({
+            ...s,
+            noUrut: String(idx + 1).padStart(2, '0')
+        }))
+        .filter(s =>
+            (s.full_name && s.full_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (s.noAbsen && String(s.noAbsen).includes(searchQuery)) ||
+            (s.id && String(s.id).includes(searchQuery))
+        );
 
     return (
         <div className="min-h-screen bg-[#082052] text-white font-sans relative">
