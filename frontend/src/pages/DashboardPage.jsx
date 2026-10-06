@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import gsap from 'gsap';
 import * as XLSX from 'xlsx';
 import PicketSchedulePage from './PicketSchedulePage';
 import AccountSettingsPage from './AccountSettingsPage';
@@ -57,6 +58,31 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
   const [saveStatus, setSaveStatus] = useState({ text: '', type: '' });
   const [importStatus, setImportStatus] = useState({ text: '', type: '' });
   const [showUpgrade, setShowUpgrade] = useState(true);
+
+  // 🎓 REF UNTUK ANIMASI GSAP KONTEN DASHBOARD
+  const mainContentRef = useRef(null);
+
+  // Animasi GSAP saat tab menu berpindah
+  useEffect(() => {
+    if (mainContentRef.current) {
+      gsap.fromTo(
+        mainContentRef.current,
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.45, ease: 'power2.out' }
+      );
+    }
+  }, [activeMenu]);
+
+  // Animasi GSAP stagger saat data siswa selesai di-load
+  useEffect(() => {
+    if (!loading && students.length > 0) {
+      gsap.fromTo(
+        '.student-row-item',
+        { opacity: 0, y: 15 },
+        { opacity: 1, y: 0, duration: 0.35, stagger: 0.04, ease: 'power1.out', delay: 0.05 }
+      );
+    }
+  }, [loading, students.length]);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [detailStudent, setDetailStudent] = useState(null);
 
@@ -277,45 +303,53 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-3 w-full">
+        <div className="flex flex-col items-center gap-4 w-full">
           <button
             onClick={() => setActiveMenu('attendance')}
-            className={`w-full py-3.5 flex items-center justify-center transition-all cursor-pointer relative ${activeMenu === 'attendance'
-              ? 'bg-[#082052] text-white shadow-xl rounded-r-2xl mr-auto pl-1'
-              : 'text-[#082052]/60 hover:text-[#082052] hover:bg-[#082052]/10 rounded-2xl w-12 h-12 mx-auto'
+            className={`w-full flex items-center transition-all cursor-pointer relative ${activeMenu === 'attendance'
+              ? 'bg-gradient-to-r from-[#082052] to-[#1248B8] text-white shadow-lg py-4 rounded-r-[28px] rounded-l-none pl-4 pr-3 mr-4'
+              : 'text-[#082052]/60 hover:text-[#082052] hover:bg-[#082052]/10 rounded-2xl w-12 h-12 justify-center mx-auto'
               }`}
             title="Presensi Siswa Wali Kelas"
           >
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
-            </svg>
+            <div className={`flex items-center ${activeMenu === 'attendance' ? 'w-full justify-center pr-2' : ''}`}>
+              <svg viewBox="0 0 16 16" className="w-6 h-6 fill-current" aria-hidden="true">
+                <g fill="currentColor">
+                  <path d="M12.5 16a3.5 3.5 0 1 0 0-7a3.5 3.5 0 0 0 0 7m1.679-4.493l-1.335 2.226a.75.75 0 0 1-1.174.144l-.774-.773a.5.5 0 0 1 .708-.708l.547.548l1.17-1.951a.5.5 0 1 1 .858.514M11 5a3 3 0 1 1-6 0a3 3 0 0 1 6 0"/>
+                  <path d="M2 13c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"/>
+                </g>
+              </svg>
+            </div>
           </button>
 
           <button
             onClick={() => setActiveMenu('picket')}
-            className={`w-full py-3.5 flex items-center justify-center transition-all cursor-pointer relative ${activeMenu === 'picket'
-              ? 'bg-[#082052] text-white shadow-xl rounded-r-2xl mr-auto pl-1'
-              : 'text-[#082052]/60 hover:text-[#082052] hover:bg-[#082052]/10 rounded-2xl w-12 h-12 mx-auto'
+            className={`w-full flex items-center transition-all cursor-pointer relative ${activeMenu === 'picket'
+              ? 'bg-gradient-to-r from-[#082052] to-[#1248B8] text-white shadow-lg py-4 rounded-r-[28px] rounded-l-none pl-4 pr-3 mr-4'
+              : 'text-[#082052]/60 hover:text-[#082052] hover:bg-[#082052]/10 rounded-2xl w-12 h-12 justify-center mx-auto'
               }`}
             title="Jadwal Piket"
           >
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19.36 2.72l1.42 1.42-3.8 3.8-1.41-1.42 3.79-3.8M5.93 17.57C5.93 17.57 6.94 15.54 9 14.5c2.06-1.04 3.47-.63 4.26-.26l2.12-2.12c-.5-.73-.85-1.78-.34-2.86.6-1.28 1.9-1.76 1.9-1.76s-.65 2.14.39 3.18c1.04 1.04 3.18.39 3.18.39s-.48 1.3-1.76 1.9c-1.08.51-2.13.16-2.86-.34L13.76 14.85c.37.79.78 2.2-2.26 4.26-1.04 2.06-3.07 3.07-3.07 3.07l-2.5-2.5 1.41-1.41-1.41-1.41-1.41 1.41-2.5-2.5s1.01-2.03 3.07-3.07c2.06-1.04 3.47-.63 4.26-.26z" />
-            </svg>
+            <div className={`flex items-center ${activeMenu === 'picket' ? 'w-full justify-center pr-2' : ''}`}>
+              <svg viewBox="0 0 14 14" className="w-6 h-6 fill-current" aria-hidden="true">
+                <path fill="currentColor" fillRule="evenodd" d="M7.106.087a.75.75 0 0 1 .413.977L4.8 7.779c.354.124.714.312 1.03.564c.55.439.998 1.1.998 1.979c0 .535.131.98.33 1.344c.318.584 1.016.793 1.682.793a.75.75 0 0 1 0 1.5h-.09v.01H2.251c-1.048 0-2.154-.701-2.182-1.925c-.023-1.026.195-2.193.815-3.084c.52-.747 1.303-1.27 2.368-1.361L6.13.5a.75.75 0 0 1 .977-.413m6.075 13.872a.75.75 0 0 0 0-1.5h-1.927a.75.75 0 1 0 0 1.5zm-.142-3.472a.75.75 0 0 1-.75.75h-1.916a.75.75 0 1 1 0-1.5h1.916a.75.75 0 0 1 .75.75m-1.785-2.073a.75.75 0 0 0 0-1.5H9.338a.75.75 0 1 0 0 1.5z" clipRule="evenodd"/>
+              </svg>
+            </div>
           </button>
 
           <button
             onClick={() => setActiveMenu('settings')}
-            className={`w-full py-3.5 flex items-center justify-center transition-all cursor-pointer relative ${activeMenu === 'settings'
-              ? 'bg-[#082052] text-white shadow-xl rounded-r-2xl mr-auto pl-1'
-              : 'text-[#082052]/60 hover:text-[#082052] hover:bg-[#082052]/10 rounded-2xl w-12 h-12 mx-auto'
+            className={`w-full flex items-center transition-all cursor-pointer relative ${activeMenu === 'settings'
+              ? 'bg-gradient-to-r from-[#082052] to-[#1248B8] text-white shadow-lg py-4 rounded-r-[28px] rounded-l-none pl-4 pr-3 mr-4'
+              : 'text-[#082052]/60 hover:text-[#082052] hover:bg-[#082052]/10 rounded-2xl w-12 h-12 justify-center mx-auto'
               }`}
             title="Pengaturan"
           >
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="3" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
+            <div className={`flex items-center ${activeMenu === 'settings' ? 'w-full justify-center pr-2' : ''}`}>
+              <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current" aria-hidden="true">
+                <path fill="currentColor" d="m9.25 22l-.4-3.2q-.325-.125-.612-.3t-.563-.375L4.7 19.375l-2.75-4.75l2.575-1.95Q4.5 12.5 4.5 12.338v-.675q0-.163.025-.338L1.95 9.375l2.75-4.75l2.975 1.25q.275-.2.575-.375t.6-.3l.4-3.2h5.5l.4 3.2q.325.125.613.3t.562.375l2.975-1.25l2.75 4.75l-2.575 1.95q.025.175.025.338v.674q0 .163-.05.338l2.575 1.95l-2.75 4.75l-2.95-1.25q-.275.2-.575.375t-.6.3l-.4 3.2zm2.8-6.5q1.45 0 2.475-1.025T15.55 12t-1.025-2.475T12.05 8.5q-1.475 0-2.488 1.025T8.55 12t1.013 2.475T12.05 15.5"/>
+              </svg>
+            </div>
           </button>
         </div>
 
@@ -331,7 +365,7 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
         </button>
       </aside>
 
-      <main className="flex-1 p-6 md:p-10 overflow-y-auto max-w-7xl mx-auto">
+      <main ref={mainContentRef} className="flex-1 p-6 md:p-10 overflow-y-auto max-w-7xl mx-auto">
         {activeMenu === 'attendance' && (
           <div className="space-y-6 text-left">
 
@@ -482,7 +516,7 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
                       <div className="p-8 text-center text-xs text-gray-500">Memuat data siswa...</div>
                     ) : filteredStudents.length > 0 ? (
                       filteredStudents.map((student, index) => (
-                        <div key={student.id || index} className="grid grid-cols-12 items-center px-6 md:px-8 py-4 text-sm hover:bg-[#efe7dd] transition">
+                        <div key={student.id || index} className="student-row-item grid grid-cols-12 items-center px-6 md:px-8 py-4 text-sm hover:bg-[#efe7dd] transition">
                           <div className="col-span-2 md:col-span-2 min-w-0 text-base md:text-lg font-bold text-[#082052] tracking-tight truncate whitespace-nowrap">
                             {student.noUrut || String(index + 1).padStart(2, '0')}
                           </div>

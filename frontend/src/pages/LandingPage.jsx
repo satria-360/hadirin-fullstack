@@ -1,26 +1,63 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ArrowUpRight, SquareArrowOutUpRight } from 'lucide-react';
+import gsap from 'gsap';
 import HeroArtwork from '../components/HeroArtwork';
 import LaptopIllustration from '../components/LaptopIllustration';
 
 export default function LandingPage({ onNavigate }) {
+  const heroRef = useRef(null);
+
+  useEffect(() => {
+    // 🎓 PENJELASAN GSAP UNTUK BELAJAR:
+    // gsap.context() memastikan animasi dibersihkan secara aman saat komponen di-unmount (React Best Practice).
+    const ctx = gsap.context(() => {
+      // gsap.from() menganimasikan elemen DARI keadaan awal menuju keadaan normalnya di CSS.
+      // 1. Animasi teks dan tombol hero secara berurutan (stagger)
+      gsap.from('.hero-animate', {
+        y: 35,
+        opacity: 0,
+        duration: 0.8,
+        stagger: 0.15, // jeda 0.15 detik antar elemen
+        ease: 'power2.out',
+      });
+
+      // 2. Animasi gambar/artwork melayang halus (floating effect)
+      gsap.from('.hero-artwork', {
+        scale: 0.9,
+        opacity: 0,
+        duration: 1,
+        ease: 'power3.out',
+        delay: 0.2,
+      });
+
+      gsap.to('.hero-floating', {
+        y: -10,
+        duration: 2,
+        repeat: -1, // -1 berarti loop selamanya
+        yoyo: true, // bolak-balik naik turun
+        ease: 'sine.inOut',
+      });
+    }, heroRef);
+
+    return () => ctx.revert(); // Cleanup animasi saat pindah halaman
+  }, []);
   return (
     <div className="w-full text-white">
       {/* 1. HERO SECTION */}
-      <section className="min-h-[85vh] flex items-center justify-center py-12 md:py-20">
+      <section ref={heroRef} className="min-h-[85vh] flex items-center justify-center py-12 md:py-20">
         <div className="w-full max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
 
           {/* Left Hero Content */}
           <div className="space-y-6 max-w-xl text-left">
-            <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-bold leading-[1.18] tracking-tight text-white drop-shadow-sm">
+            <h1 className="hero-animate text-4xl sm:text-5xl lg:text-[3.25rem] font-bold leading-[1.18] tracking-tight text-white drop-shadow-sm">
               Cara Modern Untuk<br className="hidden sm:inline" /> Mengelola Kehadiran Siswa.
             </h1>
 
-            <p className="text-slate-200/90 text-sm sm:text-base leading-relaxed max-w-lg">
+            <p className="hero-animate text-slate-200/90 text-sm sm:text-base leading-relaxed max-w-lg">
               Tinggalkan rekap manual dikertas. Catat, pantau dan buat laporan kehadiran siswa dalam satu aplikasi.
             </p>
 
-            <div className="pt-2">
+            <div className="hero-animate pt-2">
               {/* ✅ Tombol hero diganti jadi "Coba Sekarang" dan diarahkan ke LOGIN */}
               <button
                 onClick={() => onNavigate && onNavigate('login')}
@@ -33,7 +70,7 @@ export default function LandingPage({ onNavigate }) {
           </div>
 
           {/* Right Hero Artwork */}
-          <div className="flex justify-center lg:justify-end">
+          <div className="hero-artwork hero-floating flex justify-center lg:justify-end">
             <HeroArtwork />
           </div>
         </div>

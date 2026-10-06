@@ -3,16 +3,16 @@ import hadirinLogo from '../assets/hadirin-logo.png';
 
 export default function HeroArtwork() {
   return (
-    <div className="relative w-full max-w-[340px] md:max-w-[400px] mx-auto flex items-center justify-center select-none">
+    <div className="relative w-full max-w-[460px] lg:max-w-[520px] flex items-center justify-center lg:justify-end select-none">
       {/* Subtle background glow */}
-      <div className="absolute -inset-6 bg-blue-400/20 rounded-full blur-3xl -z-10 pointer-events-none" />
+      <div className="absolute -inset-4 bg-blue-500/25 rounded-full blur-3xl -z-10 pointer-events-none" />
 
       {/* Main Illustration Container */}
-      <div className="relative w-full flex items-center justify-center p-6 bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 shadow-2xl">
+      <div className="relative w-full flex items-center justify-center lg:justify-end">
         <img
-          src={hadirinLogo}
+          src="/images/hadirin-co-logo.png"
           alt="Logo Hadirin.co"
-          className="w-full max-w-[280px] md:max-w-[320px] h-auto object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.35)] transition-transform duration-500 hover:scale-[1.03]"
+          className="w-full max-w-[360px] sm:max-w-[420px] lg:max-w-[480px] h-auto object-contain drop-shadow-[0_25px_40px_rgba(0,0,0,0.38)] transition-transform duration-500 hover:scale-[1.02]"
         />
       </div>
     </div>
