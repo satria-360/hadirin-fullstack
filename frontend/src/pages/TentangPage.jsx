@@ -1,27 +1,64 @@
-import React from 'react';
-import TentangImg from '../assets/tentang-illustration.png';
+import React, { useEffect, useRef } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function TentangPage() {
+  const containerRef = useRef(null);
+  const textRef = useRef(null);
+  const imgRef = useRef(null);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // Animasi Teks
+      gsap.from(textRef.current.children, {
+        y: 60,
+        opacity: 0,
+        duration: 1,
+        stagger: 0.2,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: 'top 80%',
+        }
+      });
+
+      // Animasi Gambar (Muncul dari kiri dengan sedikit rotasi)
+      gsap.from(imgRef.current, {
+        x: -100,
+        opacity: 0,
+        rotation: -5,
+        scale: 0.9,
+        duration: 1.2,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: 'top 80%',
+        }
+      });
+    }, containerRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <div className="w-full min-h-screen bg-[#082052] text-white font-sans overflow-x-hidden relative">
-      {/* Glow merah BESAR di belakang ilustrasi (kiri-bawah) — sesuai screenshot */}
-      <div className="pointer-events-none absolute bottom-[10%] left-[6%] w-[720px] h-[720px] rounded-full bg-[#ee0000]/45 blur-[130px]" />
-      <div className="pointer-events-none absolute bottom-[18%] left-[14%] w-[420px] h-[420px] rounded-full bg-[#ff1a1a]/35 blur-[90px]" />
+    <div ref={containerRef} className="w-full min-h-screen bg-[#082052] text-white font-sans overflow-x-hidden relative">
 
       <main className="relative z-10 max-w-7xl mx-auto px-6 md:px-12 pt-32 pb-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
-          {/* KIRI: Ilustrasi Tim (di atas glow merah) */}
-          <div className="order-2 lg:order-1 flex justify-center lg:justify-start relative">
+          {/* KIRI: Ilustrasi Tim */}
+          <div ref={imgRef} className="order-2 lg:order-1 flex justify-center lg:justify-start relative">
             <img
-              src={TentangImg}
+              src="/images/about.jpg"
               alt="Ilustrasi Tim Hadirin.co"
-              className="w-full max-w-[560px] h-auto object-contain drop-shadow-2xl select-none relative z-10"
+              className="w-full max-w-[560px] h-auto object-contain rounded-2xl drop-shadow-2xl select-none relative z-10"
               draggable="false"
             />
           </div>
-
+          
           {/* KANAN: Judul Horizontal + Paragraf */}
-          <div className="order-1 lg:order-2 space-y-5 text-left max-w-xl">
+          <div ref={textRef} className="order-1 lg:order-2 space-y-5 text-left max-w-xl">
             <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold tracking-tight leading-tight">
               Tentang Kami
             </h2>

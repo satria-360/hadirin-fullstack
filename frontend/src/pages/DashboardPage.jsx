@@ -380,26 +380,6 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
               </div>
 
               <div className="flex flex-wrap items-center gap-4">
-                <div className="flex flex-col">
-                  <span className="text-[11px] text-gray-300 font-medium mb-1">
-                    Jadwalmu Saat Ini :
-                  </span>
-                  <div className="relative">
-                    <select
-                      value={selectedSubject}
-                      onChange={(e) => setSelectedSubject(e.target.value)}
-                      className="appearance-none bg-white text-[#082052] font-bold text-xs md:text-sm px-4 py-2.5 pr-8 rounded-xl shadow-md cursor-pointer focus:outline-none"
-                    >
-                      <option value="Bahasa Indonesia (07:00 - 9:00)">Bahasa Indonesia (07:00 - 9:00)</option>
-                      <option value="Matematika Wajib (09:15 - 11:30)">Matematika Wajib (09:15 - 11:30)</option>
-                      <option value="Pemrograman Web (12:30 - 15:00)">Pemrograman Web (12:30 - 15:00)</option>
-                      <option value="Basis Data (07:00 - 09:30)">Basis Data (07:00 - 09:30)</option>
-                    </select>
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#082052] text-xs font-bold">
-                      ▼
-                    </span>
-                  </div>
-                </div>
 
                 {isTeacher && (
                   <div className="flex flex-col">

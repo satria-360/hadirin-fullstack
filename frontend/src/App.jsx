@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import LandingPage from './pages/LandingPage';
 import TentangPage from './pages/TentangPage';
-import FiturPage from './pages/FiturPage';
 import PricingPage from './pages/PricingPage';
+import PaymentPage from './pages/PaymentPage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import gsap from 'gsap';
 
 export default function App() {
   // Helper untuk membaca tab dari history state atau localStorage
@@ -26,6 +27,7 @@ export default function App() {
   };
 
   const [activeTab, setActiveTabState] = useState(getInitialTab);
+  const [selectedPlan, setSelectedPlan] = useState(null);
 
   // Fungsi setActiveTab yang sinkron dengan History API browser
   const setActiveTab = (tab, addToHistory = true) => {
@@ -110,11 +112,21 @@ export default function App() {
     setActiveTab('landing'); // Logout kembali ke landing page
   };
 
+   useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.fromTo('main', 
+        { opacity: 0, y: 30, filter: 'blur(8px)' }, 
+        { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.6, ease: 'power3.out' }
+      );
+    });
+    return () => ctx.revert();
+  }, [activeTab]);
+
   return (
     <div className="min-h-screen bg-[#082052] text-white font-sans flex flex-col selection:bg-blue-500 selection:text-white">
 
-      {/* Navbar ditampilkan pada landing, tentang, fitur, dan pricing (disembunyikan saat login, dashboard, atau mode upgrade pop-out dashboard) */}
-      {activeTab !== 'login' && activeTab !== 'dashboard' && (activeTab !== 'pricing' || (typeof window !== 'undefined' && sessionStorage.getItem('pricingSource') !== 'upgradeModal')) && (
+      {/* Navbar ditampilkan pada landing, tentang, dan pricing publik (disembunyikan saat login, dashboard, payment, atau mode upgrade langganan) */}
+      {activeTab !== 'login' && activeTab !== 'dashboard' && activeTab !== 'payment' && (activeTab !== 'pricing' || (!currentUser && (typeof window === 'undefined' || sessionStorage.getItem('pricingSource') !== 'upgradeModal'))) && (
         <Navbar
           activeTab={activeTab}
           setActiveTab={(tab) => {
@@ -127,7 +139,7 @@ export default function App() {
       )}
 
       {/* Konten Utama */}
-      <main className={`flex-1 flex flex-col ${activeTab === 'login' || activeTab === 'dashboard' || (activeTab === 'pricing' && typeof window !== 'undefined' && sessionStorage.getItem('pricingSource') === 'upgradeModal') ? '' : 'pt-32'}`}>
+      <main className={`flex-1 flex flex-col ${activeTab === 'login' || activeTab === 'dashboard' || activeTab === 'payment' || (activeTab === 'pricing' && (currentUser || (typeof window !== 'undefined' && sessionStorage.getItem('pricingSource') === 'upgradeModal'))) ? '' : 'pt-32'}`}>
 
         {activeTab === 'landing' && (
           <LandingPage onNavigate={setActiveTab} currentUser={currentUser} />
@@ -135,9 +147,26 @@ export default function App() {
 
         {activeTab === 'tentang' && <TentangPage onNavigate={setActiveTab} />}
 
-        {activeTab === 'fitur' && <FiturPage onNavigate={setActiveTab} />}
+        {activeTab === 'pricing' && (
+          <PricingPage
+            onNavigate={setActiveTab}
+            onSelectPlan={(plan) => {
+              setSelectedPlan(plan);
+              setActiveTab('payment');
+            }}
+          />
+        )}
 
-        {activeTab === 'pricing' && <PricingPage onNavigate={setActiveTab} />}
+        {activeTab === 'payment' && (
+          <PaymentPage
+            plan={selectedPlan}
+            onBack={() => setActiveTab('pricing')}
+            onSuccess={() => {
+              sessionStorage.removeItem('pricingSource');
+              setActiveTab('dashboard');
+            }}
+          />
+        )}
 
         {activeTab === 'login' && (
           <LoginPage

@@ -1,13 +1,12 @@
 import React from 'react';
-import laptopImg from '../assets/laptop.png';
 
 export default function LaptopIllustration() {
   return (
-    <div className="relative w-full max-w-[380px] md:max-w-[440px] mx-auto flex items-center justify-center select-none">
+    <div className="relative w-full max-w-[340px] md:max-w-[400px] mx-auto flex items-center justify-center select-none">
       <img
-        src={laptopImg}
-        alt="Ilustrasi Laptop Hadirin"
-        className="w-full h-auto object-contain drop-shadow-2xl mix-blend-screen rounded-2xl"
+        src="/images/paper-stacked.png"
+        alt="Tumpukan Berkas Kertas Absensi"
+        className="w-full h-auto object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.45)] hover:scale-105 transition-transform duration-500"
       />
     </div>
   );

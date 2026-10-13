@@ -5,8 +5,40 @@ const mysql = require('mysql2/promise');
 const ExcelJS = require('exceljs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'rahasia_jwt_hadirin_2026';
+
+// Konfigurasi transporter email
+// Mendukung SMTP Gmail / custom SMTP melalui environment variable,
+// serta fallback otomatis ke akun test Ethereal jika SMTP belum disetting.
+let testAccount = null;
+const createTransporter = async () => {
+  if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    return nodemailer.createTransport({
+      service: process.env.SMTP_SERVICE || 'gmail',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+    });
+  }
+
+  // Fallback: Ethereal test mailer (gratis, tanpa konfigurasi kredensial pribadi)
+  if (!testAccount) {
+    testAccount = await nodemailer.createTestAccount();
+    console.log('[MAILER] Menggunakan akun tes Ethereal Mail:', testAccount.user);
+  }
+  return nodemailer.createTransport({
+    host: 'smtp.ethereal.email',
+    port: 587,
+    secure: false,
+    auth: {
+      user: testAccount.user,
+      pass: testAccount.pass
+    }
+  });
+};
 
 const app = express();
 app.use(cors());
@@ -199,6 +231,126 @@ app.post('/api/auth/register', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Gagal mendaftar: ' + error.message });
+  }
+});
+
+// Simpan kode verifikasi reset password sementara di memori
+const resetCodes = new Map(); // email -> { code, expiresAt }
+
+app.post('/api/auth/request-reset-code', async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email wajib diisi!' });
+  }
+  try {
+    const cleanEmail = email.trim().toLowerCase();
+    const [users] = await db.query('SELECT id, full_name FROM users WHERE email = ? LIMIT 1', [cleanEmail]);
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: 'Email tidak terdaftar di sistem!' });
+    }
+
+    // Generate kode OTP 6 digit angka
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Kadaluarsa dalam 15 menit
+    resetCodes.set(cleanEmail, {
+      code,
+      expiresAt: Date.now() + 15 * 60 * 1000
+    });
+
+    console.log(`[RESET PASSWORD] Kode OTP verifikasi untuk ${cleanEmail}: ${code}`);
+
+    let previewUrl = null;
+    try {
+      const transporter = await createTransporter();
+      const sender = process.env.SMTP_USER || '"Hadirin App" <no-reply@hadirin.co>';
+
+      const info = await transporter.sendMail({
+        from: sender,
+        to: cleanEmail,
+        subject: `Kode Verifikasi Reset Password: ${code}`,
+        text: `Halo,\n\nKode verifikasi Anda untuk mengatur ulang kata sandi akun Hadirin adalah: ${code}\n\nKode ini berlaku selama 15 menit.\nJika Anda tidak meminta reset password, abaikan email ini.`,
+        html: `
+          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #082052; padding: 30px; color: #ffffff; border-radius: 12px; max-width: 500px; margin: auto;">
+            <h2 style="color: #ffffff; text-align: center; margin-bottom: 20px;">Hadirin - Reset Password</h2>
+            <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6;">
+              Halo <strong>${users[0].full_name || 'Pengguna'}</strong>,<br/><br/>
+              Kami menerima permintaan untuk mengatur ulang kata sandi akun Anda. Gunakan kode verifikasi (OTP) berikut:
+            </p>
+            <div style="text-align: center; margin: 30px 0;">
+              <span style="display: inline-block; background-color: #F5EFEB; color: #082052; font-size: 32px; font-weight: 800; letter-spacing: 8px; padding: 14px 28px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+                ${code}
+              </span>
+            </div>
+            <p style="color: #cbd5e1; font-size: 12px; line-height: 1.5; text-align: center;">
+              Kode ini berlaku selama <strong>15 menit</strong>.<br/>
+              Jangan berikan kode ini kepada siapa pun. Jika Anda tidak merasa melakukan permintaan ini, abaikan pesan ini.
+            </p>
+            <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.15); margin: 25px 0;" />
+            <p style="text-align: center; font-size: 11px; color: #94a3b8;">
+              &copy; 2026 Hadirin. Seluruh hak cipta dilindungi.
+            </p>
+          </div>
+        `
+      });
+
+      // Jika menggunakan akun test Ethereal, dapatkan link preview emailnya
+      if (nodemailer.getTestMessageUrl(info)) {
+        previewUrl = nodemailer.getTestMessageUrl(info);
+        console.log(`[MAILER] Preview Email Ethereal: ${previewUrl}`);
+      }
+    } catch (mailError) {
+      console.warn('Gagal mengirim email secara langsung, menggunakan fallback log:', mailError.message);
+    }
+
+    res.json({
+      success: true,
+      message: 'Kode verifikasi OTP berhasil dikirim ke email Anda!',
+      email: cleanEmail,
+      previewUrl // Diberikan jika menggunakan akun test Ethereal agar user bisa langsung membuka inbox emailnya
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Terjadi kesalahan: ' + error.message });
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { email, code, newPassword } = req.body;
+  if (!email || !code || !newPassword) {
+    return res.status(400).json({ success: false, message: 'Email, kode verifikasi, dan password baru wajib diisi!' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanCode = code.trim().toUpperCase();
+
+  const record = resetCodes.get(cleanEmail);
+  if (!record) {
+    return res.status(400).json({ success: false, message: 'Silakan minta kode verifikasi terlebih dahulu!' });
+  }
+
+  if (Date.now() > record.expiresAt) {
+    resetCodes.delete(cleanEmail);
+    return res.status(400).json({ success: false, message: 'Kode verifikasi telah kedaluwarsa. Silakan minta kode baru.' });
+  }
+
+  if (record.code !== cleanCode) {
+    return res.status(400).json({ success: false, message: 'Kode verifikasi salah!' });
+  }
+
+  try {
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const [result] = await db.query('UPDATE users SET password_hash = ? WHERE email = ?', [passwordHash, cleanEmail]);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'User tidak ditemukan.' });
+    }
+
+    // Hapus kode setelah berhasil digunakan
+    resetCodes.delete(cleanEmail);
+
+    res.json({ success: true, message: 'Password berhasil direset! Silakan login dengan password baru Anda.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Gagal mereset password: ' + error.message });
   }
 });
 

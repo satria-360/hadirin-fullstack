@@ -1,76 +1,44 @@
 import React from 'react';
-import popupImg from '../assets/overlay-popup.png';
 
 export default function UpgradeModal({ onClose, onSelectPlan }) {
-    const handleAction = (planName) => {
-        if (onSelectPlan) {
-            onSelectPlan(planName);
-        }
-        if (onClose) {
-            onClose();
-        }
-    };
-
     return (
         <div 
             className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
             onClick={onClose}
         >
             <div 
-                className="relative w-full max-w-[420px] rounded-[28px] overflow-visible shadow-2xl transition-transform"
+                className="relative w-full max-w-[340px] sm:max-w-[360px] rounded-[24px] overflow-visible shadow-2xl transition-transform"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Gambar Pop-up Baru */}
+                {/* Iklan Gambar Pop-up (Dapat diklik menuju Pricing) */}
                 <img
-                    src={popupImg}
+                    src="/images/overlay-pop-up.png"
                     alt="Upgrade Untuk Pengalaman Terbaik"
-                    className="w-full h-auto block rounded-[24px] shadow-2xl select-none"
+                    onClick={() => {
+                        if (onSelectPlan) onSelectPlan();
+                    }}
+                    className="w-full h-auto block rounded-[24px] shadow-2xl select-none cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-transform duration-200"
                     draggable={false}
                 />
 
-                {/* Hotspot Tutup / Close (X) di pojok kanan atas gambar (gambar sudah memiliki ikon X bulat) */}
+                {/* Tombol Tutup / Close (X) di Pojok Kanan Atas */}
                 <button
                     type="button"
                     onClick={onClose}
-                    className="absolute top-[1.2%] right-[1.2%] w-11 h-11 rounded-full opacity-0 hover:opacity-20 bg-white cursor-pointer transition z-30"
-                    aria-label="Tutup"
-                />
-
-                {/* Hotspot / Button: Starter (Coba Sekarang) */}
-                <button
-                    type="button"
-                    onClick={() => handleAction('Starter')}
-                    className="absolute left-[17%] bottom-[20.5%] w-[27%] h-[4.5%] rounded-full opacity-0 hover:opacity-20 bg-white cursor-pointer transition z-20"
-                    title="Coba Sekarang - Starter"
-                    aria-label="Coba Sekarang Starter"
-                />
-
-                {/* Hotspot / Button: Paket Premium (Langganan Sekarang) */}
-                <button
-                    type="button"
-                    onClick={() => handleAction('Paket Premium')}
-                    className="absolute left-[30%] bottom-[35%] w-[40%] h-[5.2%] rounded-xl opacity-0 hover:opacity-25 bg-white cursor-pointer transition z-20"
-                    title="Langganan Sekarang - Paket Premium"
-                    aria-label="Langganan Sekarang Paket Premium"
-                />
-
-                {/* Hotspot / Button: Paket Platinum (Langganan Sekarang) */}
-                <button
-                    type="button"
-                    onClick={() => handleAction('Paket Platinum')}
-                    className="absolute right-[22%] bottom-[13.5%] w-[29%] h-[4.5%] rounded-full opacity-0 hover:opacity-20 bg-white cursor-pointer transition z-20"
-                    title="Langganan Sekarang - Paket Platinum"
-                    aria-label="Langganan Sekarang Paket Platinum"
-                />
-
-                {/* Hotspot / Button Utama: TINGKATKAN SEKARANG UNTUK HARGA TERBAIK! */}
-                <button
-                    type="button"
-                    onClick={() => handleAction('Tingkatkan Sekarang')}
-                    className="absolute left-[9%] bottom-[4.8%] w-[82%] h-[6.5%] rounded-full opacity-0 hover:opacity-20 bg-white cursor-pointer transition active:scale-[0.99] z-20 shadow-md"
-                    title="Tingkatkan Sekarang Untuk Harga Terbaik!"
-                    aria-label="Tingkatkan Sekarang Untuk Harga Terbaik"
-                />
+                    className="absolute -top-3 -right-3 sm:-top-3.5 sm:-right-3.5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#082052] border-2 border-white text-white flex items-center justify-center shadow-xl hover:bg-[#0c2e73] hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer z-40 group"
+                    aria-label="Tutup Overlay"
+                    title="Tutup (Esc)"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5] group-hover:rotate-90 transition-transform duration-200"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
         </div>
     );

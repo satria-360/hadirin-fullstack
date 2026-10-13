@@ -1,4 +1,108 @@
 import React, { useState } from 'react';
+import ResetPasswordPage from './ResetPasswordPage';
+
+const FlagIcon = ({ code, className = "w-4 h-4 rounded-full overflow-hidden shrink-0 inline-block" }) => {
+  switch (code) {
+    case '+62': // Indonesia
+      return (
+        <svg viewBox="0 0 512 512" className={className}>
+          <rect width="512" height="256" fill="#e70011" />
+          <rect y="256" width="512" height="256" fill="#ffffff" />
+        </svg>
+      );
+    case '+60': // Malaysia
+      return (
+        <svg viewBox="0 0 512 512" className={className}>
+          <path fill="#e70011" d="M0 0h512v512H0z"/>
+          <path stroke="#fff" strokeWidth="36" d="M0 55h512M0 128h512M0 201h512M0 274h512M0 347h512M0 420h512M0 493h512"/>
+          <rect width="256" height="274" fill="#002b7f"/>
+          <circle cx="120" cy="137" r="75" fill="#fcd116"/>
+          <circle cx="138" cy="137" r="62" fill="#002b7f"/>
+          <polygon points="150,137 175,145 155,160 170,180 148,172 140,195 128,175 110,190 118,168 95,170 110,152 92,137 115,135 110,112 128,128 142,110 145,132" fill="#fcd116"/>
+        </svg>
+      );
+    case '+65': // Singapura
+      return (
+        <svg viewBox="0 0 512 512" className={className}>
+          <rect width="512" height="256" fill="#ed2939" />
+          <rect y="256" width="512" height="256" fill="#ffffff" />
+          <circle cx="80" cy="128" r="55" fill="#fff" />
+          <circle cx="95" cy="128" r="48" fill="#ed2939" />
+        </svg>
+      );
+    case '+1': // USA
+      return (
+        <svg viewBox="0 0 512 512" className={className}>
+          <rect width="512" height="512" fill="#bd3d44" />
+          <path stroke="#fff" strokeWidth="39" d="M0 59h512M0 138h512M0 216h512M0 295h512M0 374h512M0 453h512" />
+          <rect width="210" height="275" fill="#192f5d" />
+          <circle cx="105" cy="137" r="25" fill="#fff" opacity="0.8"/>
+        </svg>
+      );
+    case '+44': // UK
+      return (
+        <svg viewBox="0 0 512 512" className={className}>
+          <rect width="512" height="512" fill="#012169" />
+          <path stroke="#fff" strokeWidth="85" d="M0 0l512 512M512 0L0 512" />
+          <path stroke="#c8102e" strokeWidth="50" d="M0 0l512 512M512 0L0 512" />
+          <path stroke="#fff" strokeWidth="120" d="M256 0v512M0 256h512" />
+          <path stroke="#c8102e" strokeWidth="75" d="M256 0v512M0 256h512" />
+        </svg>
+      );
+    case '+81': // Jepang
+      return (
+        <svg viewBox="0 0 512 512" className={className}>
+          <rect width="512" height="512" fill="#ffffff" />
+          <circle cx="256" cy="256" r="145" fill="#bc002d" />
+        </svg>
+      );
+    case '+82': // Korea
+      return (
+        <svg viewBox="0 0 512 512" className={className}>
+          <rect width="512" height="512" fill="#ffffff" />
+          <circle cx="256" cy="256" r="120" fill="#cd2e3a" />
+          <path d="M 256 376 A 60 60 0 0 0 256 256 A 60 60 0 0 1 256 136 A 120 120 0 0 0 256 376 Z" fill="#0047a0" />
+        </svg>
+      );
+    case '+61': // Australia
+      return (
+        <svg viewBox="0 0 512 512" className={className}>
+          <rect width="512" height="512" fill="#00008b" />
+          <rect width="256" height="256" fill="#012169" />
+          <path stroke="#fff" strokeWidth="45" d="M0 0l256 256M256 0L0 256" />
+          <path stroke="#c8102e" strokeWidth="25" d="M0 0l256 256M256 0L0 256" />
+          <path stroke="#fff" strokeWidth="65" d="M128 0v256M0 128h256" />
+          <path stroke="#c8102e" strokeWidth="40" d="M128 0v256M0 128h256" />
+          <circle cx="380" cy="360" r="30" fill="#fff" />
+        </svg>
+      );
+    case '+966': // Saudi Arabia
+      return (
+        <svg viewBox="0 0 512 512" className={className}>
+          <rect width="512" height="512" fill="#165d31" />
+          <rect x="120" y="270" width="270" height="20" rx="10" fill="#ffffff" />
+          <rect x="220" y="210" width="70" height="20" rx="10" fill="#ffffff" />
+        </svg>
+      );
+    case '+91': // India
+      return (
+        <svg viewBox="0 0 512 512" className={className}>
+          <rect width="512" height="170" fill="#ff9933" />
+          <rect y="170" width="512" height="172" fill="#ffffff" />
+          <rect y="342" width="512" height="170" fill="#128807" />
+          <circle cx="256" cy="256" r="50" fill="none" stroke="#000080" strokeWidth="12" />
+        </svg>
+      );
+    default:
+      return (
+        <span className="text-xs">🌐</span>
+      );
+  }
+};
+
+const COUNTRY_CODES = [
+  { code: '+62', name: 'Indonesia' },
+];
 
 export default function LoginPage({ onNavigate, onLoginSuccess }) {
   const [mode, setMode] = useState('login');
@@ -6,6 +110,9 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  const [guruCountryCode, setGuruCountryCode] = useState('+62');
+  const [muridCountryCode, setMuridCountryCode] = useState('+62');
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -105,7 +212,8 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           role: 'guru',
-          ...guruForm
+          ...guruForm,
+          phoneNumber: guruForm.phoneNumber ? `${guruCountryCode}${guruForm.phoneNumber.replace(/^0+/, '')}` : ''
         })
       });
 
@@ -152,7 +260,8 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           role: 'murid',
-          ...muridForm
+          ...muridForm,
+          phoneNumber: muridForm.phoneNumber ? `${muridCountryCode}${muridForm.phoneNumber.replace(/^0+/, '')}` : ''
         })
       });
 
@@ -175,81 +284,10 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
 
   if (mode === 'resetPassword') {
     return (
-      <div className="w-full min-h-screen flex flex-col md:flex-row font-sans m-0 p-0 overflow-hidden">
-        <div className="w-full md:w-1/2 bg-[#082052] text-white p-8 md:p-16 flex flex-col justify-between relative min-h-screen">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate && onNavigate('landing')}>
-            <span className="text-3xl font-black tracking-tighter text-white">R</span>
-          </div>
-
-          <div className="absolute left-6 top-1/2 -translate-y-1/2 hidden md:flex flex-col items-center gap-12 text-gray-400">
-            <div className="w-3 h-3 rounded-full border-2 border-white/60"></div>
-            <div className="w-3 h-3 rounded-full border-2 border-white/60"></div>
-            <div className="absolute top-2 bottom-2 w-[1px] bg-white/20 -z-10"></div>
-          </div>
-
-          <div className="w-full max-w-md mx-auto my-auto space-y-6">
-            <div className="space-y-1">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
-                Halo, Selamat Pagi!
-              </h1>
-              <p className="text-xs text-gray-300">Konfirmasi Kode Email</p>
-            </div>
-
-            {successMessage && (
-              <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-xs">
-                {successMessage}
-              </div>
-            )}
-
-            <form className="space-y-4" onSubmit={(e) => {
-              e.preventDefault();
-              setSuccessMessage('Instruksi reset kata sandi telah dikirim ke email Anda!');
-              setTimeout(() => {
-                handleSwitchMode('login');
-              }, 2000);
-            }}>
-              <div className="space-y-1 text-left">
-                <input
-                  type="text"
-                  placeholder="AGDA2"
-                  className="w-full px-4 py-2.5 bg-white/5 border border-white/20 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:border-white/50 transition uppercase tracking-widest"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-3 bg-[#F5EFEB] text-[#082052] font-bold rounded-xl text-sm hover:bg-white transition flex items-center justify-center gap-2 shadow-md mt-4 cursor-pointer"
-              >
-                Reset Password ↗
-              </button>
-            </form>
-
-            <div className="text-center text-xs text-gray-300 pt-2">
-              Sudah ingat kata sandi?{' '}
-              <button
-                type="button"
-                onClick={() => handleSwitchMode('login')}
-                className="font-bold text-white hover:underline cursor-pointer"
-              >
-                Login Disini
-              </button>
-            </div>
-          </div>
-
-          <div className="h-6"></div>
-        </div>
-
-        <div className="w-full md:w-1/2 bg-[#F5EFEB] text-[#082052] p-8 md:p-16 flex flex-col items-center justify-center text-center min-h-screen">
-          <div className="max-w-md space-y-3">
-            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
-              Reset Password
-            </h2>
-            <p className="text-xs md:text-sm text-gray-600 leading-relaxed">
-              Silahkan Isi Semua Data Yang Dibutuhkan <br /> Untuk Mereset Password.
-            </p>
-          </div>
-        </div>
-      </div>
+      <ResetPasswordPage
+        onBackToLogin={() => handleSwitchMode('login')}
+        onNavigate={onNavigate}
+      />
     );
   }
 
@@ -257,8 +295,12 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
     return (
       <div className="w-full min-h-screen flex flex-col md:flex-row font-sans m-0 p-0 overflow-hidden">
         <div className="w-full md:w-1/2 bg-[#F5EFEB] text-[#082052] p-8 md:p-16 flex flex-col justify-between relative min-h-screen">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate && onNavigate('landing')}>
-            <span className="text-3xl font-black tracking-tighter text-gray-400">R</span>
+          <div className="flex items-center gap-2 cursor-pointer group shrink-0" onClick={() => onNavigate && onNavigate('landing')}>
+            <img
+              src="/images/Logo_RekaEnam.svg"
+              alt="Logo Reka Enam"
+              className="h-8 sm:h-9 w-auto opacity-70 group-hover:opacity-100 transition-opacity duration-300"
+            />
           </div>
 
           <div className="max-w-md my-auto space-y-3">
@@ -291,41 +333,41 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
             <form className="space-y-3" onSubmit={handleRegisterGuruSubmit}>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1 text-left">
-                  <label className="text-[11px] text-gray-300 font-medium">Nama Depan *</label>
+                  <label className="text-[12px] text-gray-300 font-medium">Nama Depan <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     required
                     placeholder="Asep"
                     value={guruForm.firstName}
                     onChange={(e) => setGuruForm({ ...guruForm, firstName: e.target.value })}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
+                    className="w-full px-3 py-3 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
                   />
                 </div>
                 <div className="space-y-1 text-left">
-                  <label className="text-[11px] text-gray-300 font-medium">Nama Belakang</label>
+                  <label className="text-[12px] text-gray-300 font-medium">Nama Belakang </label>
                   <input
                     type="text"
                     placeholder="Sularjana"
                     value={guruForm.lastName}
                     onChange={(e) => setGuruForm({ ...guruForm, lastName: e.target.value })}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
+                    className="w-full px-3 py-3 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
                   />
                 </div>
               </div>
 
               <div className="space-y-1 text-left">
-                <label className="text-[11px] text-gray-300 font-medium">Kelas Yang Diampu</label>
+                <label className="text-[12px] text-gray-300 font-medium">Kelas Yang Diampu</label>
                 <input
                   type="text"
                   placeholder="XI TKJ 2"
                   value={guruForm.kelasAmampu}
                   onChange={(e) => setGuruForm({ ...guruForm, kelasAmampu: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
+                  className="w-full px-3 py-3 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
                 />
               </div>
 
               <div className="space-y-1 text-left">
-                <label className="text-[11px] text-gray-300 font-medium">NUPTK</label>
+                <label className="text-[12px] text-gray-300 font-medium">NUPTK</label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -333,27 +375,41 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
                   placeholder="Contoh: 198701012015031002"
                   value={guruForm.jurusan}
                   onChange={(e) => setGuruForm({ ...guruForm, jurusan: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
+                  className="w-full px-3 py-3 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
                 />
               </div>
 
               <div className="space-y-1 text-left">
-                <label className="text-[11px] text-gray-300 font-medium">Email *</label>
+                <label className="text-[12px] text-gray-300 font-medium">Email <span className="text-red-500">*</span></label>
                 <input
                   type="email"
                   required
                   placeholder="asep@hadirin.co"
                   value={guruForm.email}
                   onChange={(e) => setGuruForm({ ...guruForm, email: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
+                  className="w-full px-3 py-3 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
                 />
               </div>
 
               <div className="space-y-1 text-left">
-                <label className="text-[11px] text-gray-300 font-medium">Nomor Telepon</label>
-                <div className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/20 rounded-xl">
-                  <span className="text-xs">🇮</span>
-                  <span className="text-xs text-gray-300">+62</span>
+                <label className="text-[12px] text-gray-300 font-medium">Nomor Telepon</label>
+                <div className="flex items-center gap-2 px-3 py-3 bg-white/5 border border-white/20 rounded-xl focus-within:border-white/50 transition">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <FlagIcon code={guruCountryCode} className="w-4 h-4 rounded-full overflow-hidden shrink-0 shadow-sm" />
+                    <select
+                      value={guruCountryCode}
+                      onChange={(e) => setGuruCountryCode(e.target.value)}
+                      className="bg-transparent text-xs text-white border-none focus:outline-none cursor-pointer pr-1"
+                      title="Pilih Kode Negara"
+                    >
+                      {COUNTRY_CODES.map((item) => (
+                        <option key={item.code} value={item.code} className="bg-[#082052] text-white">
+                          {item.code} ({item.name})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <span className="text-white/20">|</span>
                   <input
                     type="tel"
                     placeholder="8152211234"
@@ -365,7 +421,7 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
               </div>
 
               <div className="space-y-1 text-left relative">
-                <label className="text-[11px] text-gray-300 font-medium">Password *</label>
+                <label className="text-[12px] text-gray-300 font-medium">Password <span className="text-red-500">*</span></label>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
@@ -373,7 +429,7 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
                     placeholder="••••••••••••"
                     value={guruForm.password}
                     onChange={(e) => setGuruForm({ ...guruForm, password: e.target.value })}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50 pr-8"
+                    className="w-full px-3 py-3 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50 pr-8"
                   />
                   <button
                     type="button"
@@ -395,14 +451,14 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
               </div>
 
               <div className="space-y-1 text-left">
-                <label className="text-[11px] text-gray-300 font-medium">Konfirmasi Password *</label>
+                <label className="text-[12px] text-gray-300 font-medium">Konfirmasi Password <span className="text-red-500">*</span></label>
                 <input
                   type="password"
                   required
                   placeholder="••••••••••••"
                   value={guruForm.confirmPassword}
                   onChange={(e) => setGuruForm({ ...guruForm, confirmPassword: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
+                  className="w-full px-3 py-3 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
                 />
               </div>
 
@@ -447,8 +503,12 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
     return (
       <div className="w-full min-h-screen flex flex-col md:flex-row font-sans m-0 p-0 overflow-hidden">
         <div className="w-full md:w-1/2 bg-[#F5EFEB] text-[#082052] p-8 md:p-16 flex flex-col justify-between relative min-h-screen">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate && onNavigate('landing')}>
-            <span className="text-3xl font-black tracking-tighter text-gray-400">R</span>
+          <div className="flex items-center gap-2 cursor-pointer group shrink-0" onClick={() => onNavigate && onNavigate('landing')}>
+            <img
+              src="/images/Logo_RekaEnam.svg"
+              alt="Logo Reka Enam"
+              className="h-8 sm:h-9 w-auto opacity-70 group-hover:opacity-100 transition-opacity duration-300"
+            />
           </div>
 
           <div className="max-w-md my-auto space-y-3">
@@ -481,42 +541,42 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
             <form className="space-y-3" onSubmit={handleRegisterMuridSubmit}>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1 text-left">
-                  <label className="text-[11px] text-gray-300 font-medium">Nama Depan *</label>
+                  <label className="text-[12px] text-gray-300 font-medium">Nama Depan <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     required
                     placeholder="Nama Depanmu"
                     value={muridForm.firstName}
                     onChange={(e) => setMuridForm({ ...muridForm, firstName: e.target.value })}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
+                    className="w-full px-3 py-3 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
                   />
                 </div>
                 <div className="space-y-1 text-left">
-                  <label className="text-[11px] text-gray-300 font-medium">Nama Belakang</label>
+                  <label className="text-[12px] text-gray-300 font-medium">Nama Belakang</label>
                   <input
                     type="text"
                     placeholder="Nama Belakangmu"
                     value={muridForm.lastName}
                     onChange={(e) => setMuridForm({ ...muridForm, lastName: e.target.value })}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
+                    className="w-full px-3 py-3 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
                   />
                 </div>
               </div>
 
               <div className="space-y-1 text-left">
-                <label className="text-[11px] text-gray-300 font-medium">Email *</label>
+                <label className="text-[12px] text-gray-300 font-medium">Email <span className="text-red-500">*</span></label>
                 <input
                   type="email"
                   required
                   placeholder="siswa@hadirin.co"
                   value={muridForm.email}
                   onChange={(e) => setMuridForm({ ...muridForm, email: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
+                  className="w-full px-3 py-3 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
                 />
               </div>
 
               <div className="space-y-1 text-left relative">
-                <label className="text-[11px] text-gray-300 font-medium">Password *</label>
+                <label className="text-[12px] text-gray-300 font-medium">Password <span className="text-red-500">*</span></label>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
@@ -524,7 +584,7 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
                     placeholder="Password"
                     value={muridForm.password}
                     onChange={(e) => setMuridForm({ ...muridForm, password: e.target.value })}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50 pr-8"
+                    className="w-full px-3 py-3 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50 pr-8"
                   />
                   <button
                     type="button"
@@ -546,22 +606,36 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
               </div>
 
               <div className="space-y-1 text-left">
-                <label className="text-[11px] text-gray-300 font-medium">Konfirmasi Password *</label>
+                <label className="text-[12px] text-gray-300 font-medium">Konfirmasi Password <span className="text-red-500">*</span></label>
                 <input
                   type="password"
                   required
                   placeholder="Password"
                   value={muridForm.confirmPassword}
                   onChange={(e) => setMuridForm({ ...muridForm, confirmPassword: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
+                  className="w-full px-3 py-3 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
                 />
               </div>
 
               <div className="space-y-1 text-left">
-                <label className="text-[11px] text-gray-300 font-medium">Nomor Telepon</label>
-                <div className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/20 rounded-xl">
-                  <span className="text-xs">🇮</span>
-                  <span className="text-xs text-gray-300">+62</span>
+                <label className="text-[12px] text-gray-300 font-medium">Nomor Telepon</label>
+                <div className="flex items-center gap-2 px-3 py-3 bg-white/5 border border-white/20 rounded-xl focus-within:border-white/50 transition">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <FlagIcon code={muridCountryCode} className="w-4 h-4 rounded-full overflow-hidden shrink-0 shadow-sm" />
+                    <select
+                      value={muridCountryCode}
+                      onChange={(e) => setMuridCountryCode(e.target.value)}
+                      className="bg-transparent text-xs text-white border-none focus:outline-none cursor-pointer pr-1"
+                      title="Pilih Kode Negara"
+                    >
+                      {COUNTRY_CODES.map((item) => (
+                        <option key={item.code} value={item.code} className="bg-[#082052] text-white">
+                          {item.code} ({item.name})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <span className="text-white/20">|</span>
                   <input
                     type="tel"
                     placeholder="8123456789"
@@ -573,18 +647,18 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
               </div>
 
               <div className="space-y-1 text-left">
-                <label className="text-[11px] text-gray-300 font-medium">NISN / No Induk</label>
+                <label className="text-[12px] text-gray-300 font-medium">NISN / No Induk</label>
                 <input
                   type="text"
                   placeholder="Contoh: 12342"
                   value={muridForm.nisn}
                   onChange={(e) => setMuridForm({ ...muridForm, nisn: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
+                  className="w-full px-3 py-3 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
                 />
               </div>
 
               <div className="space-y-1 text-left">
-                <label className="text-[11px] text-gray-300 font-medium">
+                <label className="text-[12px] text-gray-300 font-medium">
                   Kode Kelas <span className="text-[10px] text-gray-400 font-normal">(Minta Wali Kelasmu Untuk Mendapatkannya)</span>
                 </label>
                 <input
@@ -592,7 +666,7 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
                   placeholder="Contoh: ABCD"
                   value={muridForm.kodeKelas}
                   onChange={(e) => setMuridForm({ ...muridForm, kodeKelas: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
+                  className="w-full px-3 py-3 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
                 />
               </div>
 
@@ -612,7 +686,7 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
                   onChange={(e) => setMuridForm({ ...muridForm, agreeTerms: e.target.checked })}
                   className="rounded bg-white/10 border-white/20 cursor-pointer"
                 />
-                <label htmlFor="termsMurid" className="text-[10px] text-gray-300 cursor-pointer">
+                <label htmlFor="termsMurid" className="text-[12px] text-gray-300 cursor-pointer">
                   Saya Menyetujui Syarat & Ketentuan <span className="font-bold text-white">Hadirin.co</span>
                 </label>
               </div>
@@ -637,8 +711,12 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
     return (
       <div className="w-full min-h-screen flex flex-col md:flex-row font-sans m-0 p-0 overflow-hidden">
         <div className="w-full md:w-1/2 bg-[#F5EFEB] text-[#082052] p-8 md:p-16 flex flex-col justify-between relative min-h-screen">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate && onNavigate('landing')}>
-            <span className="text-3xl font-black tracking-tighter text-gray-400">R</span>
+          <div className="flex items-center gap-2 cursor-pointer group shrink-0" onClick={() => onNavigate && onNavigate('landing')}>
+            <img
+              src="/images/Logo_RekaEnam.svg"
+              alt="Logo Reka Enam"
+              className="h-8 sm:h-9 w-auto opacity-70 group-hover:opacity-100 transition-opacity duration-300"
+            />
           </div>
 
           <div className="max-w-md my-auto space-y-3">
@@ -711,18 +789,23 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
   }
 
   return (
-    <div className="w-full min-h-screen flex flex-col md:flex-row font-sans m-0 p-0 overflow-hidden">
-      <div className="w-full md:w-1/2 bg-[#082052] text-white p-8 md:p-16 flex flex-col justify-between relative min-h-screen">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate && onNavigate('landing')}>
-          <span className="text-3xl font-black tracking-tighter text-white">R</span>
+    <div className="w-full h-screen flex flex-col md:flex-row font-sans m-0 p-0 overflow-y-auto md:overflow-hidden bg-[#082052]">
+      {/* Kiri: Form Login */}
+      <div className="w-full md:w-1/2 bg-[#082052] text-white p-6 sm:p-8 md:p-10 lg:p-12 flex flex-col justify-between h-auto md:h-screen overflow-y-auto">
+        <div className="flex items-center gap-2 cursor-pointer group shrink-0" onClick={() => onNavigate && onNavigate('landing')}>
+          <img
+            src="/images/Logo_RekaEnam.svg"
+            alt="Logo Reka Enam"
+            className="h-8 sm:h-9 w-auto brightness-0 invert group-hover:scale-105 transition-transform duration-300"
+          />
         </div>
 
-        <div className="w-full max-w-md mx-auto my-auto space-y-6">
+        <div className="w-full max-w-md mx-auto my-auto py-2 space-y-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
               Halo, Selamat Pagi!
             </h1>
-            <p className="text-xs text-gray-300 mt-1">Masukkan kredensial Anda untuk masuk ke sistem.</p>
+            <p className="text-xs text-gray-300 mt-1">Masukkan email dan password anda untuk masuk ke dashboard.</p>
           </div>
 
           {errorMessage && (
@@ -731,21 +814,21 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
             </div>
           )}
 
-          <form className="space-y-4" onSubmit={handleLoginSubmit}>
+          <form className="space-y-3.5" onSubmit={handleLoginSubmit}>
             <div className="space-y-1 text-left">
-              <label className="text-xs text-gray-300 font-medium">Email</label>
+              <label className="text-sm text-gray-300 font-medium">Email</label>
               <input
                 type="email"
                 required
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
-                placeholder="admin@hadirin.co"
-                className="w-full px-4 py-2.5 bg-white/5 border border-white/20 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:border-white/50 transition"
+                placeholder="asep123@gmail.com"
+                className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:border-white/50 transition hover:bg-white/10"
               />
             </div>
 
             <div className="space-y-1 text-left relative">
-              <label className="text-xs text-gray-300 font-medium">Password</label>
+              <label className="text-sm text-gray-300 font-medium">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -753,7 +836,7 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full px-4 py-2.5 bg-white/5 border border-white/20 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:border-white/50 transition pr-10"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:border-white/50 transition pr-10 hover:bg-white/10"
                 />
                 <button
                   type="button"
@@ -778,7 +861,7 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
               <button
                 type="button"
                 onClick={() => handleSwitchMode('resetPassword')}
-                className="text-xs font-semibold text-gray-200 hover:underline cursor-pointer"
+                className="text-xs font-semibold text-gray-200 hover:underline cursor-pointer hover:text-blue-300 transition-colors"
               >
                 Lupa Kata Sandi?
               </button>
@@ -787,7 +870,7 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-[#F5EFEB] text-[#082052] font-bold rounded-xl text-sm hover:bg-white transition flex items-center justify-center gap-2 shadow-md mt-4 disabled:opacity-50 cursor-pointer"
+              className="w-full py-3 bg-[#F5EFEB] text-[#082052] font-bold rounded-xl text-sm hover:bg-white transition-all duration-300 flex items-center justify-center gap-2 shadow-md mt-2 disabled:opacity-50 cursor-pointer hover:shadow-xl hover:scale-[1.01] active:scale-[0.98]"
             >
               {loading ? 'Memproses...' : 'Masuk ↗'}
             </button>
@@ -798,17 +881,18 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
             <button
               type="button"
               onClick={() => handleSwitchMode('selectRole')}
-              className="font-bold text-white hover:underline cursor-pointer"
+              className="font-bold text-white hover:underline cursor-pointer hover:text-blue-300 transition-colors"
             >
               Daftar Disini
             </button>
           </div>
         </div>
 
-        <div className="h-6"></div>
+        <div className="h-4 shrink-0"></div>
       </div>
 
-      <div className="w-full md:w-1/2 bg-[#F5EFEB] text-[#082052] p-8 md:p-16 flex flex-col items-center justify-center text-center min-h-screen">
+      {/* Kanan: Branding */}
+      <div className="w-full md:w-1/2 bg-[#F5EFEB] text-[#082052] p-8 md:p-16 flex flex-col items-center justify-center text-center min-h-[300px] md:h-screen">
         <div className="max-w-md space-y-3">
           <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
             Selamat Datang <br /> Kembali!
