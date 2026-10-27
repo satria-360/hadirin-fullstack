@@ -1,138 +1,151 @@
 import React, { useState } from 'react';
-import { X, CheckCircle } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { X } from 'lucide-react';
 
 export default function AddStudentToPiketModal({ student, onClose, onConfirm }) {
     const [selectedDay, setSelectedDay] = useState('Senin');
     const [showSuccess, setShowSuccess] = useState(false);
+    const [loading, setLoading] = useState(false);
     const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
 
     if (!student) return null;
 
     const handleConfirm = async () => {
+        setLoading(true);
         try {
             await onConfirm(selectedDay);
-            // Tampilkan overlay sukses (hanya ditutup saat user klik tombol "Oke")
             setShowSuccess(true);
         } catch (err) {
             alert('Gagal menyimpan jadwal piket: ' + err.message);
+        } finally {
+            setLoading(false);
         }
     };
 
-    // OVERLAY SUKSES (Sesuai Desain Referensi)
+    // ── NOTIFIKASI SUKSES ──────────────────────────────────────────────────────
     if (showSuccess) {
-        return (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-                <div className="bg-white text-[#111827] w-full max-w-sm rounded-[28px] shadow-2xl px-7 py-8 relative border border-gray-100 flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+        return createPortal(
+            <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+                <div style={{ background: '#fff', width: '100%', maxWidth: '320px', borderRadius: '28px', boxShadow: '0 25px 50px rgba(0,0,0,0.3)', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
 
-                    {/* Ikon Badge Lingkaran Biru dengan Bintang/Decagram di Tengah & Centang */}
-                    <div className="mb-5 relative flex items-center justify-center">
-                        <div className="w-20 h-20 rounded-full bg-gradient-to-b from-[#0e3b91] to-[#082052] flex items-center justify-center shadow-lg shadow-blue-900/20">
-                            {/* Inner Badge Star Decagram */}
-                            <div className="w-10 h-10 bg-[#fbf5eb] rounded-lg rotate-45 flex items-center justify-center shadow-xs">
-                                <div className="w-10 h-10 bg-[#fbf5eb] rounded-lg -rotate-45 flex items-center justify-center">
-                                    <svg className="w-5 h-5 text-[#082052]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="20 6 9 17 4 12"></polyline>
-                                    </svg>
-                                </div>
+                    {/* Icon centang */}
+                    <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(to bottom, #0e3b91, #082052)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', boxShadow: '0 8px 20px rgba(8,32,82,0.3)' }}>
+                        <div style={{ width: 32, height: 32, background: '#fbf5eb', borderRadius: 8, transform: 'rotate(45deg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: 32, height: 32, background: '#fbf5eb', borderRadius: 8, transform: 'rotate(-45deg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#082052" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg>
                             </div>
                         </div>
                     </div>
 
-                    {/* Judul & Subjudul */}
-                    <h3 className="text-[21px] font-black tracking-tight text-gray-950 mb-2 leading-snug">
-                        Data Siswa Berhasil Dipindahkan!
-                    </h3>
-                    <p className="text-[13px] text-gray-500 font-medium leading-relaxed mb-6 px-1">
-                        Silahkan kembali ke pengaturan jika ada data yang salah
+                    <h3 style={{ fontSize: 18, fontWeight: 900, color: '#111', margin: '0 0 6px' }}>Berhasil Dipindahkan!</h3>
+                    <p style={{ fontSize: 12, color: '#555', margin: '0 0 4px' }}>
+                        <strong style={{ color: '#082052' }}>{student.full_name}</strong> dijadwalkan piket hari{' '}
+                        <strong style={{ color: '#D6A143' }}>{selectedDay}</strong>.
                     </p>
+                    <p style={{ fontSize: 11, color: '#999', marginBottom: 24 }}>Kembali ke pengaturan jika ada data yang salah.</p>
 
-                    {/* Tombol Oke Biru Full Rounded */}
                     <button
                         onClick={() => { setShowSuccess(false); onClose(); }}
-                        className="w-full py-3.5 px-6 bg-gradient-to-b from-[#0e3b91] to-[#082052] hover:from-[#1145ab] hover:to-[#0c2a68] text-white text-[15px] font-bold rounded-full shadow-lg shadow-blue-950/25 transition-all duration-150 cursor-pointer active:scale-[0.98]"
+                        style={{ width: '100%', padding: '12px', background: 'linear-gradient(to bottom, #0e3b91, #082052)', color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 999, border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(8,32,82,0.3)' }}
                     >
                         Oke
                     </button>
                 </div>
-            </div>
+            </div>,
+            document.body
         );
     }
 
-    // FORM PILIH HARI
-    return (
-        <div className="fixed inset-y-0 right-0 z-[55] w-full md:w-[420px] bg-white/98 backdrop-blur-md shadow-2xl border-l border-gray-200 flex flex-col animate-in slide-in-from-right duration-300">
+    // ── FORM PILIH HARI — dirender ke document.body via Portal ────────────────
+    return createPortal(
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+            <div style={{ background: '#fff', width: '100%', maxWidth: '360px', borderRadius: 24, boxShadow: '0 25px 50px rgba(0,0,0,0.25)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
 
-            {/* Header Overlay */}
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-lg font-extrabold text-[#082052] tracking-tight">
-                    Tambah Ke Jadwal Piket
-                </h3>
-                <button
-                    onClick={onClose}
-                    className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition cursor-pointer"
-                >
-                    <X className="w-4 h-4 stroke-[2.5]" />
-                </button>
-            </div>
-
-            {/* Body Overlay */}
-            <div className="flex-1 p-6 overflow-y-auto space-y-6">
-
-                {/* Info Siswa Terpilih */}
-                <div className="bg-[#F8F3ED] rounded-2xl p-4 border border-[#E4D8CE]">
-                    <p className="text-xs text-gray-500 mb-1">Siswa Dipilih:</p>
-                    <h4 className="font-bold text-[#082052] text-sm">{student.full_name}</h4>
-                    <p className="text-[11px] text-gray-400 mt-0.5">NIS: {student.noAbsen || '-'}</p>
+                {/* Header */}
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#082052' }}>Atur Jadwal Piket</h3>
+                    <button
+                        onClick={onClose}
+                        style={{ width: 28, height: 28, borderRadius: '50%', background: '#f3f4f6', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}
+                    >
+                        <X size={14} strokeWidth={2.5} />
+                    </button>
                 </div>
 
-                {/* Pilihan Hari */}
-                <div>
-                    <label className="block text-xs font-bold text-[#082052] mb-3 uppercase tracking-wide">
-                        Pilih Jadwal Piket:
-                    </label>
-                    <div className="grid grid-cols-5 gap-2">
-                        {days.map((day) => (
-                            <button
-                                key={day}
-                                type="button"
-                                onClick={() => setSelectedDay(day)}
-                                className={`py-2 px-1 rounded-xl text-[10px] font-bold transition cursor-pointer border ${selectedDay === day
-                                        ? 'bg-[#082052] text-white border-[#082052] shadow-md'
-                                        : 'bg-white text-gray-600 border-gray-200 hover:border-[#082052]/30'
-                                    }`}
-                            >
-                                {day.slice(0, 3)}
-                            </button>
-                        ))}
+                {/* Body */}
+                <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+                    {/* Info siswa */}
+                    <div style={{ background: '#F8F3ED', borderRadius: 16, padding: '12px 16px', border: '1px solid #E4D8CE' }}>
+                        <p style={{ margin: '0 0 2px', fontSize: 10, color: '#9ca3af' }}>Siswa Dipilih:</p>
+                        <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 700, color: '#082052' }}>{student.full_name}</p>
+                        <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>NIS: {student.noAbsen || student.employee_code || '-'}</p>
+                    </div>
+
+                    {/* Pilih hari */}
+                    <div>
+                        <p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 700, color: '#082052', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pilih Hari Piket:</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
+                            {days.map((day) => (
+                                <button
+                                    key={day}
+                                    type="button"
+                                    onClick={() => setSelectedDay(day)}
+                                    style={{
+                                        padding: '8px 4px',
+                                        borderRadius: 12,
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        border: selectedDay === day ? '1px solid #082052' : '1px solid #e5e7eb',
+                                        background: selectedDay === day ? '#082052' : '#fff',
+                                        color: selectedDay === day ? '#fff' : '#6b7280',
+                                        transition: 'all 0.15s',
+                                        boxShadow: selectedDay === day ? '0 2px 8px rgba(8,32,82,0.2)' : 'none',
+                                    }}
+                                >
+                                    {day.slice(0, 3)}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Konfirmasi */}
+                    <div style={{ background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: 12, padding: '10px 16px', textAlign: 'center' }}>
+                        <p style={{ margin: 0, fontSize: 11, color: '#4b5563', lineHeight: 1.6 }}>
+                            Pindahkan <strong style={{ color: '#082052' }}>'{student.full_name}'</strong> ke jadwal piket hari <strong style={{ color: '#D6A143' }}>{selectedDay}</strong>?
+                        </p>
                     </div>
                 </div>
 
-                {/* Konfirmasi Teks */}
-                <div className="pt-2">
-                    <p className="text-xs text-gray-600 leading-relaxed text-center">
-                        Kamu yakin ingin menambahkan{' '}
-                        <span className="font-bold text-[#082052]">'{student.full_name}'</span>{' '}
-                        ke jadwal piket hari{' '}
-                        <span className="font-bold text-[#D6A143]">{selectedDay}</span>?
-                    </p>
+                {/* Footer */}
+                <div style={{ padding: '0 20px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <button
+                        onClick={onClose}
+                        style={{ padding: '12px', borderRadius: 12, border: '1px solid #d1d5db', background: '#fff', color: '#374151', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                    >
+                        Batal
+                    </button>
+                    <button
+                        onClick={handleConfirm}
+                        disabled={loading}
+                        style={{ padding: '12px', borderRadius: 12, border: 'none', background: '#082052', color: '#fff', fontSize: 12, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 2px 8px rgba(8,32,82,0.3)' }}
+                    >
+                        {loading ? (
+                            <>
+                                <svg style={{ animation: 'spin 1s linear infinite', width: 14, height: 14 }} fill="none" viewBox="0 0 24 24">
+                                    <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                </svg>
+                                Menyimpan...
+                            </>
+                        ) : 'Ya, Pindahkan'}
+                    </button>
                 </div>
             </div>
-
-            {/* Footer Aksi */}
-            <div className="p-6 border-t border-gray-100 grid grid-cols-2 gap-3">
-                <button
-                    onClick={onClose}
-                    className="py-3 px-4 rounded-xl border border-gray-300 text-gray-700 text-xs font-bold hover:bg-gray-50 transition cursor-pointer"
-                >
-                    Tidak
-                </button>
-                <button
-                    onClick={handleConfirm}
-                    className="py-3 px-4 rounded-xl bg-[#D6A143] hover:bg-[#c4923b] text-white text-xs font-bold shadow-md transition cursor-pointer"
-                >
-                    Ya
-                </button>
-            </div>
-        </div>
+        </div>,
+        document.body
     );
 }

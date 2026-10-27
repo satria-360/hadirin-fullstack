@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Upload, Eye, Edit3, Save } from 'lucide-react';
 
 const STATUS_STYLE = {
@@ -43,8 +44,8 @@ export default function AttendanceDetailModal({ student, onClose, onSave }) {
 
     if (!student) return null;
 
-    return (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-[#F8F3ED] text-[#082052] w-full max-w-md rounded-3xl shadow-2xl border border-[#E4D8CE] relative overflow-hidden">
                 <button
                     onClick={onClose}
@@ -97,7 +98,6 @@ export default function AttendanceDetailModal({ student, onClose, onSave }) {
                             )}
                         </div>
 
-                        {/* Hadir dan Alpha disamakan: tidak ada upload bukti keterangan langsung */}
                         {isNoProofStatus && (
                             <div className="pt-2 space-y-2.5">
                                 <button
@@ -158,6 +158,7 @@ export default function AttendanceDetailModal({ student, onClose, onSave }) {
                     </div>
                 )}
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

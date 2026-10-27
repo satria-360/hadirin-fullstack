@@ -6,7 +6,8 @@ const plans = [
     name: 'Starter',
     desc: 'Membuka fitur-fitur dasar, dan lainnya.',
     priceTitle: 'Free Plan',
-    priceSub: '',
+    pricePerMonth: null,
+    priceBilledNote: null,
     headerStyle: 'bg-gradient-to-br from-[#1241a8] to-[#0a276b] text-white',
     badge: null,
     featuresTitle: 'Dapatkan fitur:',
@@ -17,8 +18,9 @@ const plans = [
   {
     name: 'Paket Premium',
     desc: 'Fitur mendalam dari Hadirin.co.',
-    priceTitle: 'Rp. 1.500.000',
-    priceSub: '/Semester',
+    priceTitle: null,
+    pricePerMonth: 'Rp 250.000',
+    priceBilledNote: 'Rp 1.500.000 / 6 bulan',
     headerStyle: 'bg-gradient-to-b from-[#8f7514] via-[#5c4a09] to-[#1f1b0a] text-white',
     badge: null,
     featuresTitle: 'Dapatkan fitur:',
@@ -29,8 +31,9 @@ const plans = [
   {
     name: 'Paket Platinum',
     desc: 'Membuka seluruh fitur Hadirin.co dan dapatkan layanan prioritas.',
-    priceTitle: 'Rp. 2.500.000',
-    priceSub: '/Tahun Ajaran',
+    priceTitle: null,
+    pricePerMonth: 'Rp 208.333',
+    priceBilledNote: 'Rp 2.500.000 / tahun ajaran',
     headerStyle: 'bg-gradient-to-b from-[#4d5248] via-[#3d4239] to-[#252822] text-white',
     badge: 'Paket Paling Hemat!',
     featuresTitle: 'Dapatkan fitur:',
@@ -133,12 +136,23 @@ export default function PricingPage({ onNavigate, onSelectPlan }) {
                       </p>
                     </div>
                     <div className="mt-4 pt-1 font-bold tracking-tight">
-                      <span className="text-lg sm:text-xl font-bold font-sans">
-                        {plan.priceTitle}
-                      </span>
-                      {plan.priceSub && (
-                        <span className="text-xs sm:text-sm font-medium text-white/90 ml-0.5">
-                          {plan.priceSub}
+                      {plan.pricePerMonth ? (
+                        <>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-xl sm:text-2xl font-extrabold font-sans">
+                              {plan.pricePerMonth}
+                            </span>
+                            <span className="text-xs sm:text-sm font-medium text-white/80">
+                              /bulan
+                            </span>
+                          </div>
+                          <p className="text-[10px] sm:text-xs text-white/60 mt-1 font-medium">
+                            Ditagih {plan.priceBilledNote}
+                          </p>
+                        </>
+                      ) : (
+                        <span className="text-lg sm:text-xl font-bold font-sans">
+                          {plan.priceTitle}
                         </span>
                       )}
                     </div>

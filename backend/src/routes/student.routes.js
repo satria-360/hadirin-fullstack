@@ -4,6 +4,7 @@ const studentController = require('../controllers/student.controller');
 const { authenticateToken } = require('../middlewares/auth.middleware');
 
 router.post('/create', authenticateToken, studentController.createStudent);
+router.post('/import-bulk', authenticateToken, studentController.importStudents);
 router.put('/:id/update-piket-day', authenticateToken, studentController.updatePicketDay);
 
 module.exports = router;

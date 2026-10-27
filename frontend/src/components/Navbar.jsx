@@ -19,7 +19,7 @@ export default function Navbar({ activeTab, setActiveTab, currentUser }) {
   }, []);
 
   const tabs = [
-    { id: 'pricing', label: 'Harga' },
+    { id: 'pricing', label: 'Langganan' },
     { id: 'tentang', label: 'Tentang Kami' },
   ];
 

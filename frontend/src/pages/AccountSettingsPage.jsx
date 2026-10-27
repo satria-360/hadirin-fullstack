@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateUser, onStudentAdded, onOpenAddStudent }) {
   const [studentAddedSuccess, setStudentAddedSuccess] = useState('');
@@ -422,32 +423,19 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
           </h3>
 
           <div className="space-y-4">
-            {/* Toggle 1: Notifikasi */}
+            {/* Toggle 1: Notifikasi — selalu aktif, tidak dapat diubah */}
             <div className="flex items-center gap-3.5">
-              <button
-                type="button"
-                onClick={() => setNotifEmail(!notifEmail)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${notifEmail ? 'bg-emerald-500' : 'bg-gray-300'
-                  }`}
-              >
-                <span
-                  className={`pointer-events-none inline-flex items-center justify-center h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out text-[9px] font-bold text-gray-700 ${notifEmail ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                >
-                  {notifEmail ? 'ON' : 'OFF'}
+              <div className="relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent bg-emerald-500 opacity-70 cursor-not-allowed">
+                <span className="pointer-events-none inline-flex items-center justify-center h-5 w-5 translate-x-5 rounded-full bg-white shadow text-[9px] font-bold text-gray-700">
+                  ON
                 </span>
-              </button>
+              </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-[#111827] leading-tight">
-                    Notifikasi
-                  </span>
-                  <span className="text-[10px] font-semibold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
-                    *Wajib Dinyalakan
-                  </span>
-                </div>
+                <span className="text-xs font-bold text-[#111827] leading-tight">
+                  Notifikasi
+                </span>
                 <div className="text-[11px] text-gray-500 mt-0.5">
-                  Pemberitahuan akan dikirim melalui email kamu. (Wajib dinyalakan untuk menerima pembaruan akun & absensi)
+                  Pemberitahuan dikirim melalui email untuk pembaruan akun &amp; absensi.
                 </div>
               </div>
             </div>
@@ -482,8 +470,8 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
       </div>
 
       {/* MODAL GANTI PASSWORD */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+      {showPasswordModal && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-[#F8F3ED] text-[#1E293B] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[#E9DFD5] relative animate-in fade-in zoom-in-95 duration-150">
             <button
               onClick={() => setShowPasswordModal(false)}
@@ -557,7 +545,8 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -147,28 +147,184 @@ const importBatch = async (req, res) => {
   }
 };
 
-// Export rekap absensi siswa ke Excel
+// Export rekap absensi siswa ke Excel — hanya siswa yang diinput wali kelas (is_student_entry=1) dari kelas milik guru
+// Terima opsional query param ?date=YYYY-MM-DD (default: hari ini)
 const exportExcel = async (req, res) => {
   try {
+    // Tanggal ekspor (default: hari ini)
+    const targetDate = req.query.date || new Date().toISOString().split('T')[0];
+
+    // Cari class_id & nama kelas milik guru yang sedang login
+    const [classRows] = await db.query(
+      'SELECT c.id, c.name FROM classes c WHERE c.teacher_id = ? LIMIT 1',
+      [req.user.id]
+    );
+    const classId = classRows.length > 0 ? classRows[0].id : null;
+    const className = classRows.length > 0 ? classRows[0].name : 'Kelas';
+
+    if (!classId) {
+      return res.status(404).json({ success: false, message: 'Kelas tidak ditemukan untuk akun ini.' });
+    }
+
     const [rows] = await db.query(`
-      SELECT CURDATE() AS tanggal, u.employee_code, u.full_name, COALESCE(pr.status, 'Belum Absen') AS status, COALESCE(pr.area_name, 'Kelas') AS mata_pelajaran
-      FROM users u LEFT JOIN roles r ON u.role_id = r.id LEFT JOIN picket_reports pr ON u.id = pr.user_id AND pr.picket_date = CURDATE()
-      WHERE LOWER(COALESCE(r.name, '')) IN ('murid', 'siswa', 'employee') OR u.role_id = 4 ORDER BY u.id ASC
-    `);
+      SELECT
+        u.employee_code,
+        u.full_name,
+        COALESCE(pr.status, 'Belum Absen') AS status
+      FROM users u
+      LEFT JOIN picket_reports pr ON u.id = pr.user_id AND DATE(pr.picket_date) = ?
+      WHERE u.role_id = 4
+        AND u.is_student_entry = 1
+        AND u.class_id = ?
+      ORDER BY u.full_name ASC
+    `, [targetDate, classId]);
+
+    const exportDate = new Date(targetDate + 'T00:00:00');
+    const dateStr = exportDate.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const fileName = `Rekap_Absensi_${targetDate}.xlsx`;
+
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Rekap Absensi Siswa');
-    worksheet.columns = [
-      { header: 'Tanggal', key: 'tanggal', width: 15 },
-      { header: 'No Absen / NIS', key: 'employee_code', width: 18 },
-      { header: 'Nama Siswa', key: 'full_name', width: 30 },
-      { header: 'Mata Pelajaran', key: 'mata_pelajaran', width: 25 },
-      { header: 'Status Kehadiran', key: 'status', width: 18 }
+    workbook.creator = 'Hadirin App';
+    workbook.created = today;
+    const ws = workbook.addWorksheet('Rekap Absensi', {
+      pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true }
+    });
+
+    // ── Lebar kolom
+    ws.columns = [
+      { key: 'no',     width: 6  },
+      { key: 'nis',    width: 20 },
+      { key: 'nama',   width: 38 },
+      { key: 'status', width: 20 },
     ];
-    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF082052' } };
-    worksheet.addRows(rows);
+
+    // ── Helper border
+    const border = {
+      top:    { style: 'thin', color: { argb: 'FFD0D8E4' } },
+      left:   { style: 'thin', color: { argb: 'FFD0D8E4' } },
+      bottom: { style: 'thin', color: { argb: 'FFD0D8E4' } },
+      right:  { style: 'thin', color: { argb: 'FFD0D8E4' } },
+    };
+    const thickBorder = {
+      top:    { style: 'medium', color: { argb: 'FF082052' } },
+      left:   { style: 'medium', color: { argb: 'FF082052' } },
+      bottom: { style: 'medium', color: { argb: 'FF082052' } },
+      right:  { style: 'medium', color: { argb: 'FF082052' } },
+    };
+
+    // ── BARIS 1: Judul utama (merge 4 kolom)
+    ws.mergeCells('A1:D1');
+    const titleCell = ws.getCell('A1');
+    titleCell.value = '📋 REKAP ABSENSI SISWA';
+    titleCell.font = { bold: true, size: 16, color: { argb: 'FF082052' }, name: 'Calibri' };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBF5EB' } };
+    ws.getRow(1).height = 36;
+
+    // ── BARIS 2: Sub-info kelas & tanggal
+    ws.mergeCells('A2:D2');
+    const subCell = ws.getCell('A2');
+    subCell.value = `${className}   |   ${dateStr}`;
+    subCell.font = { italic: true, size: 10, color: { argb: 'FF6B7280' }, name: 'Calibri' };
+    subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBF5EB' } };
+    ws.getRow(2).height = 22;
+
+    // ── BARIS 3: Pemisah kosong
+    ws.mergeCells('A3:D3');
+    ws.getRow(3).height = 6;
+
+    // ── BARIS 4: Header kolom
+    const headers = ['No', 'NIS', 'Nama Siswa', 'Status Kehadiran'];
+    const headerRow = ws.getRow(4);
+    headers.forEach((h, i) => {
+      const cell = headerRow.getCell(i + 1);
+      cell.value = h;
+      cell.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' }, name: 'Calibri' };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF082052' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: false };
+      cell.border = thickBorder;
+    });
+    headerRow.height = 28;
+
+    // ── BARIS DATA
+    const statusColorMap = {
+      'Hadir':       { bg: 'FFD1FAE5', fg: 'FF065F46' }, // hijau
+      'Izin':        { bg: 'FFFEF3C7', fg: 'FF92400E' }, // kuning
+      'Sakit':       { bg: 'FFDBEAFE', fg: 'FF1E40AF' }, // biru
+      'Alpha':       { bg: 'FFFEE2E2', fg: 'FF991B1B' }, // merah
+      'Alpa':        { bg: 'FFFEE2E2', fg: 'FF991B1B' },
+      'Belum Absen': { bg: 'FFF3F4F6', fg: 'FF6B7280' }, // abu
+    };
+
+    rows.forEach((r, i) => {
+      const rowNum = i + 5;
+      const dataRow = ws.getRow(rowNum);
+      const isEven = i % 2 === 0;
+      const rowBg = isEven ? 'FFFFFFFF' : 'FFF8FAFC';
+      const statusKey = r.status || 'Belum Absen';
+      const statusColor = statusColorMap[statusKey] || statusColorMap['Belum Absen'];
+
+      const values = [
+        String(i + 1).padStart(2, '0'),
+        r.employee_code || '-',
+        r.full_name || '-',
+        statusKey,
+      ];
+
+      values.forEach((v, j) => {
+        const cell = dataRow.getCell(j + 1);
+        cell.value = v;
+        cell.font = { size: 10, name: 'Calibri', color: { argb: j === 3 ? statusColor.fg : 'FF1F2937' }, bold: j === 3 };
+        cell.alignment = { horizontal: j === 0 || j === 3 ? 'center' : 'left', vertical: 'middle' };
+        cell.border = border;
+        cell.fill = {
+          type: 'pattern', pattern: 'solid',
+          fgColor: { argb: j === 3 ? statusColor.bg : rowBg }
+        };
+      });
+
+      dataRow.height = 22;
+    });
+
+    // ── BARIS RINGKASAN
+    const summaryRowNum = rows.length + 5;
+    const counts = rows.reduce((acc, r) => {
+      const s = r.status || 'Belum Absen';
+      acc[s] = (acc[s] || 0) + 1;
+      return acc;
+    }, {});
+
+    ws.mergeCells(`A${summaryRowNum}:B${summaryRowNum}`); // kolom A-B untuk label
+    const sumLabelCell = ws.getCell(`A${summaryRowNum}`);
+    sumLabelCell.value = `Total Siswa: ${rows.length}`;
+    sumLabelCell.font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
+    sumLabelCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF082052' } };
+    sumLabelCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    sumLabelCell.border = thickBorder;
+
+    const summaryParts = [
+      `Hadir: ${counts['Hadir'] || 0}`,
+      `Izin: ${counts['Izin'] || 0}`,
+      `Sakit: ${counts['Sakit'] || 0}`,
+      `Alpha: ${counts['Alpha'] || counts['Alpa'] || 0}`,
+      `Belum Absen: ${counts['Belum Absen'] || 0}`,
+    ];
+
+    ws.mergeCells(`C${summaryRowNum}:D${summaryRowNum}`);
+    const sumDetailCell = ws.getCell(`C${summaryRowNum}`);
+    sumDetailCell.value = summaryParts.join('   |   ');
+    sumDetailCell.font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
+    sumDetailCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0e3b91' } };
+    sumDetailCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    sumDetailCell.border = thickBorder;
+    ws.getRow(summaryRowNum).height = 24;
+
+    // ── Freeze header
+    ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 4, topLeftCell: 'A5', activeCell: 'A5' }];
+
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=Rekap_Absensi_Siswa.xlsx');
+    res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {

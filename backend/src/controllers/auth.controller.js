@@ -4,7 +4,7 @@ const nodemailer = require('nodemailer');
 const { db } = require('../config/database');
 const { createTransporter } = require('../config/mailer');
 const { JWT_SECRET } = require('../middlewares/auth.middleware');
-const { createUniqueClassCode, getClassInfo } = require('../utils/classHelper');
+const { createUniqueClassCode, getClassInfo, generateInviteToken, validateInviteToken } = require('../utils/classHelper');
 
 // Simpan kode verifikasi reset password sementara di memori
 const resetCodes = new Map(); // email -> { code, expiresAt }
@@ -36,19 +36,7 @@ const login = async (req, res) => {
       classPayload = { class_id: created.id, class_name: created.name, class_code: created.code };
     }
 
-    // Reset status kehadiran siswa saat user login sehingga dashboard kembali bersih (status kosong)
-    try {
-      if (classPayload.class_id) {
-        await db.query(`
-          UPDATE picket_reports pr
-          JOIN users u ON pr.user_id = u.id
-          SET pr.status = ''
-          WHERE u.class_id = ? AND pr.picket_date = CURDATE()
-        `, [classPayload.class_id]);
-      }
-    } catch (resetErr) {
-      console.warn('Gagal mereset status absensi saat login:', resetErr.message);
-    }
+
     const token = jwt.sign(
       { id: user.id, email: user.email, full_name: user.full_name, role_id: user.role_id, role_name: user.role_name },
       JWT_SECRET,
@@ -70,7 +58,7 @@ const login = async (req, res) => {
 };
 
 const register = async (req, res) => {
-  const { role, firstName, lastName, email, password, phoneNumber, nisn, kodeKelas, kelasAmampu } = req.body;
+  const { role, firstName, lastName, email, password, phoneNumber, nisn, inviteToken, kodeKelas, kelasAmampu } = req.body;
   if (!email || !password || !firstName) {
     return res.status(400).json({ success: false, message: 'Data pendaftaran belum lengkap!' });
   }
@@ -87,18 +75,28 @@ const register = async (req, res) => {
     let classId = null;
     let freshClass = null;
     if (role === 'murid') {
-      const code = (kodeKelas || '').trim().toUpperCase();
-      if (!code) {
-        return res.status(400).json({ success: false, message: 'Kode Kelas wajib diisi. Minta kode dari Wali Kelas Anda.' });
+      // Dukung invite token baru (prioritas) atau kode kelas lama (backward compat)
+      const rawToken = (inviteToken || kodeKelas || '').trim();
+      if (!rawToken) {
+        return res.status(400).json({ success: false, message: 'Kode Undangan wajib diisi. Minta kode dari Wali Kelas Anda.' });
       }
-      const [cls] = await db.query('SELECT id FROM classes WHERE access_code = ? LIMIT 1', [code]);
-      if (!cls.length) {
-        return res.status(400).json({
-          success: false,
-          message: 'Kode Kelas tidak valid! Harap minta kode kelas yang sesuai dari Wali Kelas Anda.'
-        });
+      // Coba validasi sebagai invite token baru (40 hex chars)
+      const resolvedClassId = await validateInviteToken(rawToken);
+      if (resolvedClassId) {
+        classId = resolvedClassId;
+      } else {
+        // Fallback: coba sebagai kode akses lama
+        const upperCode = rawToken.toUpperCase();
+        const [cls] = await db.query('SELECT id FROM classes WHERE access_code = ? LIMIT 1', [upperCode]);
+        if (!cls.length) {
+          return res.status(400).json({
+            success: false,
+            message: 'Kode Undangan tidak valid atau sudah kedaluwarsa. Minta kode baru dari Wali Kelas Anda.'
+          });
+        }
+        classId = cls[0].id;
       }
-      classId = cls[0].id;
+      classId = classId;
       employeeCode = (nisn && nisn.trim()) ? nisn.trim() : `USR-${Date.now().toString().slice(-6)}`;
     } else {
       employeeCode = `USR-${Date.now().toString().slice(-6)}`;
@@ -266,10 +264,36 @@ const getMe = async (req, res) => {
   }
 };
 
+/**
+ * Generate invite token baru untuk kelas guru.
+ * Endpoint: POST /api/auth/generate-invite (butuh token guru)
+ */
+const generateInvite = async (req, res) => {
+  try {
+    const { db: dbConn } = require('../config/database');
+    // Cari kelas milik guru ini
+    const [cls] = await dbConn.query('SELECT id FROM classes WHERE teacher_id = ? LIMIT 1', [req.user.id]);
+    if (!cls.length) {
+      return res.status(404).json({ success: false, message: 'Kelas tidak ditemukan. Pastikan Anda sudah terdaftar sebagai wali kelas.' });
+    }
+    const classId = cls[0].id;
+    const { token, expiresAt } = await generateInviteToken(classId);
+    res.json({
+      success: true,
+      message: 'Kode undangan berhasil dibuat!',
+      invite_token: token,
+      invite_expires_at: expiresAt,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Gagal membuat kode undangan: ' + error.message });
+  }
+};
+
 module.exports = {
   login,
   register,
   requestResetCode,
   resetPassword,
-  getMe
+  getMe,
+  generateInvite
 };

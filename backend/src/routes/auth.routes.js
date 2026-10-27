@@ -8,5 +8,6 @@ router.post('/register', authController.register);
 router.post('/request-reset-code', authController.requestResetCode);
 router.post('/reset-password', authController.resetPassword);
 router.get('/me', authenticateToken, authController.getMe);
+router.post('/generate-invite', authenticateToken, authController.generateInvite);
 
 module.exports = router;

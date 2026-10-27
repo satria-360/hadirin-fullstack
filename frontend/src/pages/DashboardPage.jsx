@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import gsap from 'gsap';
 import * as XLSX from 'xlsx';
 import PicketSchedulePage from './PicketSchedulePage';
@@ -52,7 +53,11 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
     return () => window.removeEventListener('popstate', handleDashboardPopState);
   }, []);
   const [addStudentType, setAddStudentType] = useState('absensi');
-  const [classCode, setClassCode] = useState(currentUser?.class_code || 'GAJBHG');
+  const [inviteToken, setInviteToken] = useState(currentUser?.invite_token || null);
+  const [inviteExpiresAt, setInviteExpiresAt] = useState(currentUser?.invite_expires_at || null);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [inviteTimeLeft, setInviteTimeLeft] = useState(''); // label countdown realtime
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState({ text: '', type: '' });
@@ -95,8 +100,28 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
   }, []);
 
   useEffect(() => {
-    if (currentUser?.class_code) setClassCode(currentUser.class_code);
-  }, [currentUser?.class_code]);
+    if (currentUser?.invite_token) setInviteToken(currentUser.invite_token);
+    if (currentUser?.invite_expires_at) setInviteExpiresAt(currentUser.invite_expires_at);
+  }, [currentUser?.invite_token, currentUser?.invite_expires_at]);
+
+  // ⏱️ Countdown realtime — tick tiap 1 detik, reset saat inviteExpiresAt berubah
+  useEffect(() => {
+    const computeLabel = () => {
+      if (!inviteExpiresAt) { setInviteTimeLeft(''); return; }
+      const diff = new Date(inviteExpiresAt) - new Date();
+      if (diff <= 0) {
+        setInviteTimeLeft('Kedaluwarsa');
+        setInviteToken(null); // hapus token dari tampilan saat expired
+        return;
+      }
+      const m = Math.floor(diff / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setInviteTimeLeft(`Berlaku ${m}:${String(s).padStart(2, '0')} menit lagi`);
+    };
+    computeLabel(); // langsung hitung saat mount / inviteExpiresAt berubah
+    const timer = setInterval(computeLabel, 1000);
+    return () => clearInterval(timer); // cleanup saat unmount atau dependencies berubah
+  }, [inviteExpiresAt]);
 
   const fetchStudents = async () => {
     try {
@@ -128,6 +153,36 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
     );
   };
 
+  // ✅ GENERATE INVITE TOKEN
+  const handleGenerateInvite = async () => {
+    setInviteLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/auth/generate-invite', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setInviteToken(data.invite_token);
+        setInviteExpiresAt(data.invite_expires_at);
+      }
+    } catch (e) {
+      console.error('Gagal generate invite:', e);
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const handleCopyInvite = () => {
+    if (!inviteToken) return;
+    navigator.clipboard.writeText(inviteToken).then(() => {
+      setInviteCopied(true);
+      setTimeout(() => setInviteCopied(false), 2000);
+    });
+  };
+
+
   const handleSetHadirSemua = () => {
     setStudents(prev => prev.map(student => ({ ...student, status: 'Hadir' })));
   };
@@ -152,7 +207,7 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
       const data = await response.json();
       if (response.ok && data.success) {
         setSaveStatus({ text: 'Rekap absensi hari ini berhasil disimpan!', type: 'success' });
-        setTimeout(() => { setActiveMenu('history'); }, 800);
+        setTimeout(() => { setActiveMenu('history'); }, 1200);
       } else {
         setSaveStatus({ text: 'Tersimpan lokal di sesi saat ini!', type: 'success' });
       }
@@ -166,7 +221,8 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
   const handleExportExcel = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/attendance/export/excel', {
+      const dateParam = new Date().toISOString().split('T')[0];
+      const response = await fetch(`http://localhost:5000/api/attendance/export/excel?date=${dateParam}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -175,27 +231,28 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Rekap_Absensi_${selectedSubject.split(' ')[0]}_${new Date().toISOString().split('T')[0]}.xlsx`;
+        a.download = `Rekap_Absensi_${dateParam}.xlsx`;
         document.body.appendChild(a);
         a.click();
         a.remove();
         return;
       }
-      throw new Error('Fallback client-side export');
-    } catch {
-      const worksheetData = students.map((s, idx) => ({
-        'No Absen': s.noUrut || String(idx + 1).padStart(2, '0'),
-        'Nama Siswa': s.full_name || s.name,
-        'NIS': s.noAbsen || '-',
-        'Mata Pelajaran': selectedSubject,
-        'Keterangan': s.status || 'Belum Absen'
-      }));
-
-      const ws = XLSX.utils.json_to_sheet(worksheetData);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Rekap Absensi');
-      XLSX.writeFile(wb, `Rekap_Absensi_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (err) {
+      console.error('Export error:', err);
     }
+
+    // Fallback client-side
+    const dateParam = new Date().toISOString().split('T')[0];
+    const worksheetData = students.map((s, idx) => ({
+      'No': s.noUrut || String(idx + 1).padStart(2, '0'),
+      'NIS': s.noAbsen || s.nis || '-',
+      'Nama Siswa': s.full_name || s.name || '-',
+      'Status Kehadiran': s.status || 'Belum Absen'
+    }));
+    const ws = XLSX.utils.json_to_sheet(worksheetData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Rekap Absensi');
+    XLSX.writeFile(wb, `Rekap_Absensi_${dateParam}.xlsx`);
   };
 
   const handleSaveProof = async (updated) => {
@@ -274,17 +331,27 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
         defaultType={addStudentType}
         onBack={() => setActiveMenu('settings')}
         onSuccess={(newStudent) => {
-          setStudents(prev => [newStudent, ...prev]);
-          if (addStudentType === 'piket') {
-            setActiveMenu('picket');
-          } else {
+          if (newStudent?._bulk) {
+            // Bulk import — reload seluruh daftar siswa dari server
+            fetchStudents();
             setActiveMenu('attendance');
+            setImportStatus({
+              text: `Impor selesai! ${newStudent.inserted} siswa berhasil ditambahkan ke kelas.`,
+              type: 'success'
+            });
+          } else {
+            setStudents(prev => [newStudent, ...prev]);
+            if (addStudentType === 'piket') {
+              setActiveMenu('picket');
+            } else {
+              setActiveMenu('attendance');
+            }
+            setImportStatus({
+              text: `Siswa "${newStudent.full_name}" berhasil ditambahkan dan masuk ke sistem!`,
+              type: 'success'
+            });
           }
-          setImportStatus({
-            text: `Siswa "${newStudent.full_name}" berhasil ditambahkan dan masuk ke sistem!`,
-            type: 'success'
-          });
-          setTimeout(() => setImportStatus({ text: '', type: '' }), 4000);
+          setTimeout(() => setImportStatus({ text: '', type: '' }), 5000);
         }}
       />
     );
@@ -369,7 +436,7 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
         {activeMenu === 'attendance' && (
           <div className="space-y-6 text-left">
 
-            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 pb-2">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-2">
               <div>
                 <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
                   Selamat Datang, {currentUser?.full_name ? currentUser.full_name : 'Asoey'}!
@@ -379,28 +446,55 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-4">
-
-                {isTeacher && (
-                  <div className="flex flex-col">
-                    <span className="text-[11px] text-gray-300 font-medium mb-1">
-                      Kode Kelasmu :
-                    </span>
-                    <div className="bg-[#D6A143] text-white font-extrabold text-sm md:text-base px-6 py-2.5 rounded-xl shadow-md tracking-wider flex items-center justify-center">
-                      {classCode || '—'}
+              {isTeacher && (
+                <div className="flex flex-col gap-1 shrink-0">
+                  <span className="text-[11px] text-gray-300 font-medium mb-0.5">Undang Siswa ke Kelas:</span>
+                  {inviteToken ? (
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="bg-[#D6A143] text-white font-mono font-bold text-[11px] px-3 py-2 rounded-xl shadow-md tracking-widest max-w-[200px] truncate select-all cursor-text"
+                          title={inviteToken}
+                        >
+                          {inviteToken.slice(0, 16)}…
+                        </div>
+                        <button
+                          onClick={handleCopyInvite}
+                          title="Salin kode undangan"
+                          className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition cursor-pointer"
+                        >
+                          {inviteCopied ? '✓ Disalin!' : 'Salin'}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-amber-300">{inviteTimeLeft}</span>
+                        <button
+                          onClick={handleGenerateInvite}
+                          disabled={inviteLoading}
+                          className="text-[10px] text-gray-400 hover:text-white underline transition cursor-pointer disabled:opacity-50"
+                        >
+                          {inviteLoading ? 'Membuat...' : 'Buat Ulang'}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  ) : (
+                    <button
+                      onClick={handleGenerateInvite}
+                      disabled={inviteLoading}
+                      className="bg-[#D6A143] hover:bg-amber-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer disabled:opacity-60"
+                    >
+                      {inviteLoading ? 'Membuat...' : '+ Buat Kode Undangan'}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {isEmptyState ? (
               <>
                 <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 pt-2">
                   <div>
-                    <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                      Daftar Siswa
-                    </h2>
+                    <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Daftar Siswa</h2>
                     <p className="text-xs text-gray-300">Absen Disini.</p>
                   </div>
                 </div>
@@ -422,39 +516,53 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
               </>
             ) : (
               <>
-                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 pt-2">
+                {/* ─── BARIS AKSI ATAS ─── */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-2">
                   <div>
-                    <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                      Daftar Siswa
-                    </h2>
+                    <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Daftar Siswa</h2>
                     <p className="text-xs text-gray-300">Absen Disini.</p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3">
-                    {/* ✅ TOMBOL RIWAYAT REKAP ABSEN */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Ekspor — paling kiri di action bar */}
+                    <button
+                      onClick={handleExportExcel}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0d2761]/70 hover:bg-[#0d2761] border border-white/20 text-white font-bold text-xs rounded-full shadow-md transition cursor-pointer"
+                      title="Ekspor rekap absen ke Excel"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+                      </svg>
+                      <span>Ekspor</span>
+                    </button>
+
+                    {/* Riwayat */}
                     <button
                       onClick={() => setShowHistoryModal(true)}
-                      className="inline-flex items-center gap-2 px-5 py-2 bg-white/10 border border-white/20 hover:bg-white/20 text-white font-bold text-xs rounded-full shadow-md transition cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/10 border border-white/20 hover:bg-white/20 text-white font-bold text-xs rounded-full shadow-md transition cursor-pointer"
                     >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                       </svg>
-                      <span>Riwayat Rekap Absen</span>
+                      <span>Riwayat</span>
                     </button>
 
+                    {/* Set Hadir Semua */}
                     <button
                       onClick={handleSetHadirSemua}
-                      className="px-5 py-2 bg-white text-[#082052] hover:bg-gray-100 font-bold text-xs rounded-full shadow-md transition cursor-pointer"
+                      className="px-4 py-2 bg-white text-[#082052] hover:bg-gray-100 font-bold text-xs rounded-full shadow-md transition cursor-pointer"
                     >
-                      Set Hadir Semua
+                      Hadir Semua
                     </button>
 
+                    {/* Reset */}
                     <button
                       onClick={handleReset}
-                      className="px-5 py-2 border border-white/40 text-white hover:bg-white/10 font-medium text-xs rounded-full transition cursor-pointer"
+                      className="px-4 py-2 border border-white/40 text-white hover:bg-white/10 font-medium text-xs rounded-full transition cursor-pointer"
                     >
                       Reset
                     </button>
+
                   </div>
                 </div>
 
@@ -547,29 +655,17 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
 
                   {!loading && filteredStudents.length > 0 && (
                     <div className="border-t border-[#D7C7B7]/60 px-6 md:px-8 py-3 flex items-center justify-between bg-[#F1EAE0]">
-                      <span className="text-xs font-bold text-[#082052]">Total Murid Hadir:</span>
-                      <span className="text-sm font-extrabold text-emerald-600">{totalHadir} Murid</span>
+                      <span className="text-xs font-bold text-[#082052]">Total Murid Hadir:
+                        <span className="text-emerald-600 ml-1.5">{totalHadir} Murid</span>
+                      </span>
+                      <button
+                        onClick={handleSaveRekap}
+                        className="px-5 py-2 rounded-full bg-[#D6A143] hover:bg-[#c4923b] text-white font-extrabold text-xs shadow-md transition cursor-pointer"
+                      >
+                        Simpan Rekap
+                      </button>
                     </div>
                   )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                  <button
-                    onClick={handleExportExcel}
-                    className="w-full py-3.5 px-6 rounded-2xl border-2 border-white/20 bg-[#0d2761]/60 hover:bg-[#0d2761] text-white font-bold text-xs md:text-sm flex items-center justify-center gap-2 shadow-lg transition cursor-pointer"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
-                    </svg>
-                    <span>Ekspor Rekapan Absen</span>
-                  </button>
-
-                  <button
-                    onClick={handleSaveRekap}
-                    className="w-full py-3.5 px-6 rounded-2xl bg-[#D6A143] hover:bg-[#c4923b] text-white font-extrabold text-xs md:text-sm flex items-center justify-center gap-2 shadow-lg transition cursor-pointer"
-                  >
-                    <span>Simpan Rekap Absensi Hari Ini</span>
-                  </button>
                 </div>
               </>
             )}
@@ -648,8 +744,8 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
       )}
 
       {/* ✅ MODAL POP-UP: LIHAT RIWAYAT REKAP ABSEN */}
-      {showHistoryModal && (
-        <div className="fixed inset-0 z-[75] flex items-start justify-center pt-20 px-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+      {showHistoryModal && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-[#F8F3ED] text-[#082052] w-full max-w-md rounded-3xl shadow-2xl p-6 border border-[#E4D8CE] relative">
             <button
               onClick={() => setShowHistoryModal(false)}
@@ -688,7 +784,8 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
               <span>Lihat Rekap Absen</span>
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

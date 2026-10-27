@@ -7,6 +7,6 @@ router.get('/history/:date', authenticateToken, attendanceController.getHistoryB
 router.post('/save-proof', authenticateToken, attendanceController.saveProof);
 router.post('/save-all', attendanceController.saveAll);
 router.post('/import-batch', attendanceController.importBatch);
-router.get('/export/excel', attendanceController.exportExcel);
+router.get('/export/excel', authenticateToken, attendanceController.exportExcel);
 
 module.exports = router;

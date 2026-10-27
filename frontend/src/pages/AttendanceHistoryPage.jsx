@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import * as XLSX from 'xlsx';
 import { ArrowLeft, Eye, Download, X } from 'lucide-react';
 
@@ -185,15 +186,37 @@ export default function AttendanceHistoryPage({ students: initialStudents, histo
         }
     };
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const dateParam = historyDate || new Date().toISOString().split('T')[0];
+            const response = await fetch(
+                `http://localhost:5000/api/attendance/export/excel?date=${dateParam}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Rekap_Absensi_${dateParam}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                return;
+            }
+        } catch (err) {
+            console.error('Export error:', err);
+        }
+
+        // Fallback client-side
         const worksheetData = students.map((s, idx) => ({
-            'Tanggal': formattedDate,
-            'No Absen': s.noUrut || String(idx + 1).padStart(2, '0'),
-            'Nama Siswa': s.full_name || '-',
+            'No': s.noUrut || String(idx + 1).padStart(2, '0'),
             'NIS': s.noAbsen || '-',
+            'Nama Siswa': s.full_name || '-',
             'Status Kehadiran': s.status || 'Belum Absen'
         }));
-
         const ws = XLSX.utils.json_to_sheet(worksheetData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Rekap Absensi');
@@ -307,8 +330,8 @@ export default function AttendanceHistoryPage({ students: initialStudents, histo
             </button>
 
             {/* MODAL DETAIL SURAT IZIN/SAKIT */}
-            {showDetailModal && selectedStudent && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+            {showDetailModal && selectedStudent && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-[#F8F3ED] text-[#082052] w-full max-w-md rounded-3xl shadow-2xl relative border border-[#E4D8CE] overflow-hidden">
 
                         {/* Header Modal */}
@@ -391,7 +414,8 @@ export default function AttendanceHistoryPage({ students: initialStudents, histo
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

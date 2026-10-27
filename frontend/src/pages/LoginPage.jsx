@@ -137,7 +137,7 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
     confirmPassword: '',
     phoneNumber: '',
     nisn: '',
-    kodeKelas: '',
+    inviteToken: '',
     agreeTerms: false
   });
 
@@ -659,13 +659,13 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
 
               <div className="space-y-1 text-left">
                 <label className="text-[12px] text-gray-300 font-medium">
-                  Kode Kelas <span className="text-[10px] text-gray-400 font-normal">(Minta Wali Kelasmu Untuk Mendapatkannya)</span>
+                  Kode Undangan <span className="text-[10px] text-gray-400 font-normal">(Minta dari Wali Kelas, berlaku 5 menit)</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="Contoh: ABCD"
-                  value={muridForm.kodeKelas}
-                  onChange={(e) => setMuridForm({ ...muridForm, kodeKelas: e.target.value })}
+                  placeholder="Tempel kode undangan dari Wali Kelas"
+                  value={muridForm.inviteToken}
+                  onChange={(e) => setMuridForm({ ...muridForm, inviteToken: e.target.value })}
                   className="w-full px-3 py-3 bg-white/5 border border-white/20 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-white/50"
                 />
               </div>

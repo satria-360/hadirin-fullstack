@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Camera, CheckCircle2, History, X, Clock, Calendar, Eye, Plus, RefreshCw } from 'lucide-react';
 import AddStudentToPiketModal from '../components/AddStudentToPiketModal';
 
@@ -422,10 +423,13 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
               </div>
               <div>
                 <label className="block text-xs font-bold text-[#082052] mb-1.5">Tanggal Piket*</label>
-                <div className="relative">
-                  <input type="date" value={tanggalPiket} onChange={(e) => setTanggalPiket(e.target.value)} required className="w-full px-4 py-3 bg-white rounded-xl text-xs md:text-sm text-gray-800 focus:outline-none shadow-xs border border-amber-200 pr-10" />
-                  <Calendar className="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
+                <input
+                  type="date"
+                  value={tanggalPiket}
+                  onChange={(e) => setTanggalPiket(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 bg-white rounded-xl text-xs md:text-sm text-gray-800 focus:outline-none shadow-xs border border-amber-200"
+                />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1.5">
@@ -573,7 +577,7 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
       )}
 
       {/* MODAL KAMERA LANGSUNG */}
-      {activeCameraTarget && (
+      {activeCameraTarget && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
           <div className="bg-[#082052] text-white w-full max-w-md rounded-3xl p-6 shadow-2xl relative border border-white/20 flex flex-col items-center">
             <button
@@ -646,11 +650,12 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL LIHAT BUKTI PIKET */}
-      {selectedProof && (
+      {selectedProof && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in">
           <div className="bg-[#F8F3ED] text-[#082052] w-full max-w-lg rounded-3xl p-6 shadow-2xl relative border border-[#E4D8CE]">
             <button onClick={() => setSelectedProof(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 p-1.5 rounded-full hover:bg-black/5 transition cursor-pointer"><X className="w-5 h-5" /></button>
@@ -669,7 +674,8 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
             <div className="bg-[#D6A143] rounded-xl p-3 text-xs font-semibold text-[#082052] mb-4"><span className="font-bold">Catatan: </span>{selectedProof.notes}</div>
             <button onClick={() => setSelectedProof(null)} className="w-full py-2.5 bg-[#082052] text-white rounded-xl text-xs font-bold hover:bg-[#0c2e73] transition cursor-pointer">Tutup</button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

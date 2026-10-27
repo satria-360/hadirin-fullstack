@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function TambahSiswaModal({ isOpen, onClose, onSuccess, initialDay = 'Senin' }) {
   // Step 1: Input Data ('input') | Step 2: Konfirmasi Data ('confirm')
@@ -66,8 +67,8 @@ export default function TambahSiswaModal({ isOpen, onClose, onSuccess, initialDa
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/75 backdrop-blur-xs animate-in fade-in overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-6 bg-black/75 backdrop-blur-xs animate-in fade-in overflow-y-auto">
       {/* Container 2 Kolom Persis Screenshot */}
       <div className="w-full max-w-4xl bg-[#F5EFEB] text-[#082052] rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row relative min-h-[520px]">
         {/* Tombol Tutup X */}
@@ -274,6 +275,7 @@ export default function TambahSiswaModal({ isOpen, onClose, onSuccess, initialDa
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

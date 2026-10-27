@@ -1,27 +1,26 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 export default function UpgradeModal({ onClose, onSelectPlan }) {
-    return (
-        <div 
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+    return createPortal(
+        <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
             onClick={onClose}
         >
-            <div 
+            <div
                 className="relative w-full max-w-[340px] sm:max-w-[360px] rounded-[24px] overflow-visible shadow-2xl transition-transform"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Iklan Gambar Pop-up (Dapat diklik menuju Pricing) */}
+                {/* Iklan Gambar Pop-up */}
                 <img
                     src="/images/overlay-pop-up.png"
                     alt="Upgrade Untuk Pengalaman Terbaik"
-                    onClick={() => {
-                        if (onSelectPlan) onSelectPlan();
-                    }}
+                    onClick={() => { if (onSelectPlan) onSelectPlan(); }}
                     className="w-full h-auto block rounded-[24px] shadow-2xl select-none cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-transform duration-200"
                     draggable={false}
                 />
 
-                {/* Tombol Tutup / Close (X) di Pojok Kanan Atas */}
+                {/* Tombol Tutup */}
                 <button
                     type="button"
                     onClick={onClose}
@@ -40,6 +39,7 @@ export default function UpgradeModal({ onClose, onSelectPlan }) {
                     </svg>
                 </button>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
