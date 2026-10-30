@@ -52,7 +52,7 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch('http://localhost:5000/api/picket/reports', {
+      const response = await fetch('/api/picket/reports', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -72,7 +72,7 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch('http://localhost:5000/api/picket/dashboard', {
+      const response = await fetch('/api/picket/dashboard', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -100,7 +100,7 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/students/${targetStudent.id}/update-piket-day`, {
+      const response = await fetch(`/api/students/${targetStudent.id}/update-piket-day`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -251,7 +251,7 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
     setSubmitMessage({ text: 'Mengirim laporan piket...', type: 'info' });
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/picket/upload', {
+      const response = await fetch('/api/picket/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -292,7 +292,7 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
         <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
           Selamat Pagi, {currentUser?.full_name ? currentUser.full_name : 'User'}!
         </h1>
-        <p className="text-gray-300 italic text-sm mt-1">"Bersyukur Adalah Kebahagiaan"</p>
+        <p className="text-gray-300 text-sm mt-1">{formatDateIndonesia(currentTime)}</p>
       </div>
 
       <div className="w-full bg-[#D6A143] rounded-3xl p-6 md:p-8 text-[#082052] shadow-xl relative overflow-hidden mb-6">

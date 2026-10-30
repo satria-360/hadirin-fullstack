@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Plus, Search } from 'lucide-react';
 import AddStudentToPiketModal from '../components/AddStudentToPiketModal';
 
@@ -18,7 +18,7 @@ export default function AddPiketStudentPage({ currentUser, onBack, onPiketAssign
     const fetchClassStudents = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/picket/dashboard', {
+            const response = await fetch('/api/picket/dashboard', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (response.ok) {
@@ -46,7 +46,7 @@ export default function AddPiketStudentPage({ currentUser, onBack, onPiketAssign
         try {
             const token = localStorage.getItem('token');
             // Panggil endpoint backend untuk update picket_day siswa
-            const response = await fetch(`http://localhost:5000/api/students/${targetStudent.id}/update-piket-day`, {
+            const response = await fetch(`/api/students/${targetStudent.id}/update-piket-day`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

@@ -116,7 +116,10 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
       }
       const m = Math.floor(diff / 60000);
       const s = Math.floor((diff % 60000) / 1000);
-      setInviteTimeLeft(`Berlaku ${m}:${String(s).padStart(2, '0')} menit lagi`);
+      const label = m > 0
+        ? `Berlaku ${m} menit ${String(s).padStart(2, '0')} detik lagi`
+        : `Berlaku ${s} detik lagi`;
+      setInviteTimeLeft(label);
     };
     computeLabel(); // langsung hitung saat mount / inviteExpiresAt berubah
     const timer = setInterval(computeLabel, 1000);
@@ -126,7 +129,7 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
   const fetchStudents = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/picket/dashboard', {
+      const response = await fetch('/api/picket/dashboard', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -158,7 +161,7 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
     setInviteLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/auth/generate-invite', {
+      const res = await fetch('/api/auth/generate-invite', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -195,7 +198,7 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
     setSaveStatus({ text: 'Menyimpan absensi...', type: 'info' });
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/attendance/save-all', {
+      const response = await fetch('/api/attendance/save-all', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -222,7 +225,7 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
     try {
       const token = localStorage.getItem('token');
       const dateParam = new Date().toISOString().split('T')[0];
-      const response = await fetch(`http://localhost:5000/api/attendance/export/excel?date=${dateParam}`, {
+      const response = await fetch(`/api/attendance/export/excel?date=${dateParam}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -258,7 +261,7 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
   const handleSaveProof = async (updated) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/attendance/save-proof', {
+      const response = await fetch('/api/attendance/save-proof', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -441,8 +444,8 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
                 <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
                   Selamat Datang, {currentUser?.full_name ? currentUser.full_name : 'Asoey'}!
                 </h1>
-                <p className="text-gray-300 italic text-sm mt-1">
-                  "Bersyukur Adalah Kebahagiaan"
+                <p className="text-gray-300 text-sm mt-1">
+                  {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
               </div>
 

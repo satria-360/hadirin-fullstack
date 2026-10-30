@@ -15,9 +15,6 @@ const initDb = async () => {
   try {
     const connection = await db.getConnection();
     console.log(`Berhasil terhubung ke database ${process.env.DB_NAME || 'db_hadirin'}!`);
-    // Pastikan proof_url & photo_url bertipe LONGTEXT agar muat menyimpan base64 gambar resolusi penuh tanpa terpotong
-    await connection.query('ALTER TABLE picket_reports MODIFY proof_url LONGTEXT');
-    await connection.query('ALTER TABLE picket_photos MODIFY photo_url LONGTEXT');
     connection.release();
   } catch (error) {
     console.error('Gagal terhubung ke database:', error.message);

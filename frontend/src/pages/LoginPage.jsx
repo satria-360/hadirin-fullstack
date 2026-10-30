@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import ResetPasswordPage from './ResetPasswordPage';
 
 const FlagIcon = ({ code, className = "w-4 h-4 rounded-full overflow-hidden shrink-0 inline-block" }) => {
@@ -162,7 +162,7 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail, password: loginPassword })
@@ -207,7 +207,7 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -255,7 +255,7 @@ export default function LoginPage({ onNavigate, onLoginSuccess }) {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

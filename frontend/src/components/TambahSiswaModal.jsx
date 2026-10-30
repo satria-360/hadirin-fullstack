@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 
 export default function TambahSiswaModal({ isOpen, onClose, onSuccess, initialDay = 'Senin' }) {
@@ -30,7 +30,7 @@ export default function TambahSiswaModal({ isOpen, onClose, onSuccess, initialDa
     setErrorMsg('');
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/students/create', {
+      const response = await fetch('/api/students/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

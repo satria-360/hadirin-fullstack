@@ -463,8 +463,8 @@ export default function PiketPage({ onNavigate, currentUser }) {
             <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">
               Selamat {new Date().getHours() < 12 ? 'Pagi' : new Date().getHours() < 16 ? 'Siang' : new Date().getHours() < 19 ? 'Sore' : 'Malam'}, {currentUser?.name ? currentUser.name.split(' ')[0] : 'Asoey'}!
             </h1>
-            <p className="text-sm text-slate-300 italic mt-1 font-medium">
-              “Bersyukur Adalah Kebahagiaan”
+            <p className="text-sm text-slate-300 mt-1 font-medium">
+              {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
           </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateUser, onStudentAdded, onOpenAddStudent }) {
@@ -76,7 +76,7 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
         ...extraFields,
       };
 
-      const res = await fetch('http://localhost:5000/api/users/profile', {
+      const res = await fetch('/api/users/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +137,7 @@ export default function AccountSettingsPage({ currentUser, onNavigate, onUpdateU
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/users/change-password', {
+      const res = await fetch('/api/users/change-password', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import LandingPage from './pages/LandingPage';
 import TentangPage from './pages/TentangPage';
@@ -80,7 +80,7 @@ export default function App() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      fetch('http://localhost:5000/api/auth/me', {
+      fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => res.json())

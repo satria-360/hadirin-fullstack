@@ -4,7 +4,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "triyono": "nodemon index.js"
+    "triyono": "nodemon index.js",
+    "migrate": "knex migrate:latest",
+    "migrate:rollback": "knex migrate:rollback"
   },
   "keywords": [],
   "author": "",
@@ -17,7 +19,8 @@
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "mysql2": "^3.24.4",
+    "knex": "^3.3.0",
+    "mysql2": "^3.24.6",
     "nodemailer": "^10.1.1",
     "xlsx": "^0.18.5"
   },

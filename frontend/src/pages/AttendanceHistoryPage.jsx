@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import * as XLSX from 'xlsx';
 import { ArrowLeft, Eye, Download, X } from 'lucide-react';
@@ -137,7 +137,7 @@ export default function AttendanceHistoryPage({ students: initialStudents, histo
             setLoading(true);
             try {
                 const token = localStorage.getItem('token');
-                const response = await fetch(`http://localhost:5000/api/attendance/history/${historyDate}`, {
+                const response = await fetch(`/api/attendance/history/${historyDate}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 if (response.ok) {
@@ -191,7 +191,7 @@ export default function AttendanceHistoryPage({ students: initialStudents, histo
             const token = localStorage.getItem('token');
             const dateParam = historyDate || new Date().toISOString().split('T')[0];
             const response = await fetch(
-                `http://localhost:5000/api/attendance/export/excel?date=${dateParam}`,
+                `/api/attendance/export/excel?date=${dateParam}`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 

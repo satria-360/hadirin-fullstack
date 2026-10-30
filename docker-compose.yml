@@ -1,0 +1,65 @@
+services:
+  # ──────────────────────────────
+  # Service Database MySQL
+  # ──────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: hadirin_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: db_hadirin
+      MYSQL_USER: user_hadirin
+      MYSQL_PASSWORD: userpassword
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ──────────────────────────────
+  # Service Backend Node.js
+  # ──────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hadirin_backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      DB_HOST: db
+      DB_USER: user_hadirin
+      DB_PASS: userpassword
+      DB_NAME: db_hadirin
+      JWT_SECRET: rahasia_jwt_hadirin_2026
+      NODE_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ──────────────────────────────
+  # Service Frontend React (Nginx)
+  # ──────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Kosongkan agar frontend pakai path relatif /api/ via Nginx proxy
+        # Jika deploy ke domain tertentu, isi: VITE_API_URL=https://api.yourdomain.com
+        VITE_API_URL: ""
+    container_name: hadirin_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+
+volumes:
+  mysql_data:

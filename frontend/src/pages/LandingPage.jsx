@@ -239,9 +239,8 @@ export default function LandingPage({ onNavigate }) {
               <div className="space-y-4">
                 <h4 className="text-white font-bold text-xl">Kantor Kami</h4>
                 <p className="text-slate-300 text-base leading-relaxed">
-                  Jl. Gede Bage Selatan No.11,<br />
-                  Kota Bandung, Jawa Barat,<br />
-                  Indonesia, 401233
+                  Jl. Kliningan No.6, Turangga, Kec. Lengkong, <br />
+                   Kota Bandung, Jawa Barat 40264
                 </p>
               </div>
             </div>

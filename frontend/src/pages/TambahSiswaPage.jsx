@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
+import hadirinLogo from '../assets/hadirin-logo.png';
 
 const DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
 
@@ -39,7 +40,7 @@ export default function TambahSiswaPage({ onBack, onSuccess, defaultType = 'abse
     setErrorMsg('');
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/students/create', {
+      const response = await fetch('/api/students/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(formData)
@@ -125,7 +126,7 @@ export default function TambahSiswaPage({ onBack, onSuccess, defaultType = 'abse
     setImportResult(null);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/students/import-bulk', {
+      const res = await fetch('/api/students/import-bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ students: validRows })
@@ -196,7 +197,7 @@ export default function TambahSiswaPage({ onBack, onSuccess, defaultType = 'abse
       {/* ── SISI KIRI ─────────────────────────────────────────────── */}
       <div className="w-full md:w-1/2 bg-[#F5EFEB] text-[#082052] p-8 md:p-16 lg:p-24 flex flex-col justify-between relative min-h-screen">
         <div className="flex items-center gap-2 cursor-pointer" onClick={onBack} title="Kembali">
-          <span className="text-3xl font-black tracking-tighter text-gray-400 hover:text-[#082052] transition">R</span>
+          <img src={hadirinLogo} alt="Hadirin Logo" className="h-8 object-contain opacity-80 hover:opacity-100 transition" />
         </div>
 
         <div className="max-w-md my-auto space-y-4">
@@ -222,10 +223,6 @@ export default function TambahSiswaPage({ onBack, onSuccess, defaultType = 'abse
             </div>
           )}
         </div>
-
-        <div className="text-xs text-gray-400 font-medium">
-          Hadirin.co • {defaultType === 'piket' ? 'Tambah Data Siswa Piket' : 'Tambah Data Absensi Siswa'}
-        </div>
       </div>
 
       {/* ── SISI KANAN ────────────────────────────────────────────── */}
@@ -242,15 +239,15 @@ export default function TambahSiswaPage({ onBack, onSuccess, defaultType = 'abse
         <div className="flex gap-2 mb-8 bg-white/5 p-1 rounded-2xl">
           <button
             onClick={() => { setMode('manual'); setStep(1); setErrorMsg(''); }}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition cursor-pointer ${mode === 'manual' ? 'bg-[#F5EFEB] text-[#082052] shadow-md' : 'text-gray-400 hover:text-white'}`}
+            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition cursor-pointer inline-flex items-center justify-center gap-1.5 ${mode === 'manual' ? 'bg-[#F5EFEB] text-[#082052] shadow-md' : 'text-gray-400 hover:text-white'}`}
           >
-            ✏️ Input Manual
+            <iconify-icon icon="gridicons:add" style={{fontSize: '1rem'}}></iconify-icon> Input Manual
           </button>
           <button
             onClick={() => { setMode('import'); setErrorMsg(''); }}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition cursor-pointer ${mode === 'import' ? 'bg-[#F5EFEB] text-[#082052] shadow-md' : 'text-gray-400 hover:text-white'}`}
+            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition cursor-pointer inline-flex items-center justify-center gap-1.5 ${mode === 'import' ? 'bg-[#F5EFEB] text-[#082052] shadow-md' : 'text-gray-400 hover:text-white'}`}
           >
-            📂 Impor Excel / CSV
+            <iconify-icon icon="material-symbols:folder-open-rounded" style={{fontSize: '1rem'}}></iconify-icon> Impor Excel / CSV
           </button>
         </div>
 

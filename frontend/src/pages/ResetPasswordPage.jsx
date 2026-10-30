@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 
 export default function ResetPasswordPage({ onBackToLogin, onNavigate }) {
   const [step, setStep] = useState(1); // 1: Minta Kode (Input Email), 2: Masukkan Kode & Password Baru
@@ -31,7 +31,7 @@ export default function ResetPasswordPage({ onBackToLogin, onNavigate }) {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/request-reset-code', {
+      const response = await fetch('/api/auth/request-reset-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -74,7 +74,7 @@ export default function ResetPasswordPage({ onBackToLogin, onNavigate }) {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/reset-password', {
+      const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code, newPassword })
