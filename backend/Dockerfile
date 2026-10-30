@@ -27,4 +27,4 @@ COPY --from=builder /app .
 EXPOSE 5000
 
 # Jalankan migrasi lalu start server
-CMD ["sh", "-c", "npx knex migrate:latest && node index.js"]
+CMD ["sh", "-c", "npx knex migrate:latest && npx knex seed:run && node index.js"]
