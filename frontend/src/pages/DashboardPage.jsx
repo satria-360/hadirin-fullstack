@@ -480,12 +480,14 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
                   {inviteToken ? (
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center gap-2">
-                        <div
-                          className="bg-[#D6A143] text-white font-mono font-bold text-[11px] px-3 py-2 rounded-xl shadow-md tracking-widest max-w-[200px] truncate select-all cursor-text"
+                        <input
+                          readOnly
+                          value={inviteToken}
                           title={inviteToken}
-                        >
-                          {inviteToken.slice(0, 16)}…
-                        </div>
+                          onClick={e => e.target.select()}
+                          className="bg-[#D6A143] text-white font-mono font-bold text-[11px] px-3 py-2 rounded-xl shadow-md tracking-widest max-w-[200px] truncate cursor-text border-none outline-none"
+                          style={{ width: '160px' }}
+                        />
                         <button
                           onClick={handleCopyInvite}
                           title="Salin kode undangan"
