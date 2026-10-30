@@ -179,11 +179,36 @@ export default function DashboardPage({ onNavigate, currentUser, onLogout, onUpd
 
   const handleCopyInvite = () => {
     if (!inviteToken) return;
-    navigator.clipboard.writeText(inviteToken).then(() => {
+    // navigator.clipboard hanya tersedia di HTTPS / localhost.
+    // Gunakan fallback execCommand agar tetap bekerja di HTTP.
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(inviteToken).then(() => {
+        setInviteCopied(true);
+        setTimeout(() => setInviteCopied(false), 2000);
+      }).catch(() => fallbackCopy(inviteToken));
+    } else {
+      fallbackCopy(inviteToken);
+    }
+  };
+
+  const fallbackCopy = (text) => {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.style.position = 'fixed';
+    el.style.opacity = '0';
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    try {
+      document.execCommand('copy');
       setInviteCopied(true);
       setTimeout(() => setInviteCopied(false), 2000);
-    });
+    } catch (err) {
+      console.error('Copy gagal:', err);
+    }
+    document.body.removeChild(el);
   };
+
 
 
   const handleSetHadirSemua = () => {
