@@ -14,7 +14,7 @@ RUN npm install
 COPY . .
 
 # Expose port aplikasi
-EXPOSE 5000
+EXPOSE 3040
 
 # Jalankan migrasi database lalu jalankan server
 CMD ["sh", "-c", "npx knex migrate:latest && npm start"]

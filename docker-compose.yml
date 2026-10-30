@@ -29,9 +29,9 @@ services:
     container_name: hadirin_backend
     restart: always
     ports:
-      - "5000:5000"
+      - "3040:3040"
     environment:
-      PORT: 5000
+      PORT: 3040
       DB_HOST: db
       DB_USER: user_hadirin
       DB_PASS: userpassword
