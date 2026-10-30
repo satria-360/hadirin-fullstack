@@ -159,6 +159,18 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
   const startCamera = async (target) => {
     setActiveCameraTarget(target);
     setCameraError('');
+
+    // navigator.mediaDevices hanya tersedia di HTTPS atau localhost.
+    // Jika HTTP, tampilkan pesan jelas.
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const currentUrl = window.location.href;
+      setCameraError(
+        `Kamera memerlukan koneksi HTTPS. Saat ini Anda mengakses via HTTP (${currentUrl}). ` +
+        'Hubungi admin untuk mengaktifkan HTTPS, atau coba buka lewat HTTPS.'
+      );
+      return;
+    }
+
     try {
       if (cameraStream) {
         cameraStream.getTracks().forEach(track => track.stop());
@@ -602,7 +614,7 @@ export default function PicketSchedulePage({ currentUser, onNavigate, onStudentA
                   {cameraError}
                 </p>
                 <div className="bg-black/40 rounded-xl p-2.5 text-[10px] text-gray-300 font-mono">
-                  1. Klik ikon 🔒 / 📷 di sebelah kiri URL address bar (http://localhost:5173)<br />
+                  1. Klik ikon 🔒 / 📷 di sebelah kiri URL address bar ({window.location.origin})<br />
                   2. Ubah <b>Camera</b> ke <b>Allow (Izinkan)</b><br />
                   3. Klik tombol "Coba Lagi" di bawah
                 </div>
